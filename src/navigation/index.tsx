@@ -19,6 +19,12 @@ import ZipfScreen from '../screens/ZipfScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
 
+import { VocabSuggestion } from '../data/seed';
+import TriagemScreen       from '../screens/TriagemScreen';
+import NewsListScreen      from '../screens/NewsListScreen';
+import NewsArticleScreen   from '../screens/NewsArticleScreen';
+import ContentDetailScreen from '../screens/ContentDetailScreen';
+
 export type RootStackParamList = {
   Main: undefined;
   Shadowing: undefined;
@@ -28,6 +34,10 @@ export type RootStackParamList = {
   Zipf: undefined;
   Profile: undefined;
   Onboarding: undefined;
+  Triagem: { suggestions: VocabSuggestion[]; title: string; subtitle: string };
+  NewsList: undefined;
+  NewsArticle: { articleId: string };
+  ContentDetail: { contentId: string };
 };
 
 export type TabParamList = {
@@ -148,6 +158,10 @@ export default function Navigation() {
         <Stack.Screen name="Pronunciation" component={PronunciationScreen} options={{ presentation: 'modal' }} />
         <Stack.Screen name="Zipf" component={ZipfScreen} options={{ presentation: 'modal' }} />
         <Stack.Screen name="Profile" component={ProfileScreen} />
+        <Stack.Screen name="Triagem"       component={TriagemScreen}       options={{ presentation: 'modal' }} />
+        <Stack.Screen name="NewsList"      component={NewsListScreen}      options={{ presentation: 'modal' }} />
+        <Stack.Screen name="NewsArticle"   component={NewsArticleScreen}   />
+        <Stack.Screen name="ContentDetail" component={ContentDetailScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
