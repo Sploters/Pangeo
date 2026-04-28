@@ -7,20 +7,8 @@ import { useNavigation } from '@react-navigation/native';
 import { Colors, Radius, Spacing } from '../theme';
 import { PgButton, PgChip, Icons } from '../components';
 import { useVaultStore, useProfileStore } from '../store';
+import { initFSRS, reviewFSRS, previewIntervals } from '../utils/fsrs';
 
-const DIFFICULTIES = [
-  { key: 'again' as const, lbl: 'De novo', sub: '<1m', c: '#B43E2A', bg: Colors.coralSoft },
-  { key: 'hard' as const, lbl: 'Difícil', sub: '6m', c: '#A86B3C', bg: Colors.goldSoft },
-  { key: 'good' as const, lbl: 'Bom', sub: '1d', c: Colors.mossDeep, bg: Colors.mossSoft },
-  { key: 'easy' as const, lbl: 'Fácil', sub: '4d', c: Colors.ocean, bg: Colors.oceanSoft },
-];
-
-const SRS_NEXT: Record<string, { srs: 'due' | 'learning' | 'mature'; strength: number }> = {
-  again: { srs: 'due', strength: 0.1 },
-  hard: { srs: 'learning', strength: 0.3 },
-  good: { srs: 'learning', strength: 0.65 },
-  easy: { srs: 'mature', strength: 1.0 },
-};
 
 function latencyLabel(ms: number): { text: string; color: string } {
   if (ms < 2000) return { text: 'RÁPIDO', color: Colors.moss };
@@ -37,17 +25,21 @@ export default function SRSScreen() {
   const [currentIdx, setCurrentIdx] = useState(0);
   const [sessionCards, setSessionCards] = useState(0);
   const [cardLatencyMs, setCardLatencyMs] = useState<number | null>(null);
+  const [intervals, setIntervals] = useState<Record<1|2|3|4, string> | null>(null);
   const flipAnim = useRef(new Animated.Value(0)).current;
   const startTimeRef = useRef<number>(Date.now());
 
-  // Deck: items that need review (not mature, and must have a gloss)
-  const deck = items.filter((v) => v.srs !== 'mature' && v.gloss.trim());
+  // Deck: items that need review (new or due, and must have a gloss)
+  const deck = items.filter(
+    (v) => (v.lastReviewAt === 0 || v.nextReviewAt <= Date.now()) && v.gloss.trim(),
+  );
   const card = deck[currentIdx];
 
   // Reset timer whenever a new card appears
   useEffect(() => {
     startTimeRef.current = Date.now();
     setCardLatencyMs(null);
+    if (card) setIntervals(previewIntervals(card));
   }, [currentIdx]);
 
   const flip = () => {
@@ -60,19 +52,20 @@ export default function SRSScreen() {
     }).start(() => setFlipped(true));
   };
 
-  const next = (difficulty: keyof typeof SRS_NEXT) => {
-    const { srs, strength } = SRS_NEXT[difficulty];
-    updateSRS(card.id, srs, strength);
+  const GRADE_MAP = { again: 1, hard: 2, good: 3, easy: 4 } as const;
 
-    const newCount = sessionCards + 1;
-    setSessionCards(newCount);
+  const next = (difficulty: keyof typeof GRADE_MAP) => {
+    const grade = GRADE_MAP[difficulty];
+    const patch = card.lastReviewAt === 0 ? initFSRS(grade) : reviewFSRS(card, grade);
+    updateSRS(card.id, patch);
+
+    setSessionCards((c) => c + 1);
     trackStudySession(1);
-
     setFlipped(false);
     flipAnim.setValue(0);
 
     if (currentIdx + 1 < deck.length) {
-      setCurrentIdx(currentIdx + 1);
+      setCurrentIdx((i) => i + 1);
     } else {
       navigation.goBack();
     }
@@ -189,14 +182,26 @@ export default function SRSScreen() {
       </View>
 
       {/* Difficulty or Reveal */}
-      {flipped ? (
+      {flipped && intervals ? (
         <View style={{ paddingHorizontal: 14, paddingBottom: 18 }}>
           <Text style={styles.diffLabel}>QUÃO BEM VOCÊ LEMBROU?</Text>
           <View style={styles.diffRow}>
-            {DIFFICULTIES.map((d) => (
-              <TouchableOpacity key={d.key} onPress={() => next(d.key)} style={[styles.diffBtn, { backgroundColor: d.bg }]} activeOpacity={0.8}>
+            {(
+              [
+                { key: 'again' as const, lbl: 'De novo', grade: 1 as const, c: '#B43E2A', bg: Colors.coralSoft },
+                { key: 'hard'  as const, lbl: 'Difícil',  grade: 2 as const, c: '#A86B3C', bg: Colors.goldSoft },
+                { key: 'good'  as const, lbl: 'Bom',      grade: 3 as const, c: Colors.mossDeep, bg: Colors.mossSoft },
+                { key: 'easy'  as const, lbl: 'Fácil',    grade: 4 as const, c: Colors.ocean,    bg: Colors.oceanSoft },
+              ] as const
+            ).map((d) => (
+              <TouchableOpacity
+                key={d.key}
+                onPress={() => next(d.key)}
+                style={[styles.diffBtn, { backgroundColor: d.bg }]}
+                activeOpacity={0.8}
+              >
                 <Text style={[styles.diffLbl, { color: d.c }]}>{d.lbl}</Text>
-                <Text style={[styles.diffSub, { color: d.c }]}>{d.sub}</Text>
+                <Text style={[styles.diffSub, { color: d.c }]}>{intervals[d.grade]}</Text>
               </TouchableOpacity>
             ))}
           </View>
