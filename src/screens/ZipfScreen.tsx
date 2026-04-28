@@ -2,18 +2,51 @@ import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Colors, Radius, Spacing } from '../theme';
 import { PgCard, PgChip, Icons, PgZipfCurve } from '../components';
-import { ZIPF_WORDS } from '../data/seed';
+import { ZIPF_TOP_500 } from '../data/seed';
 import { useProfileStore, useVaultStore } from '../store';
+import { RootStackParamList } from '../navigation';
 
 const ZIPF_BASE: Record<string, number> = { A1: 18, A2: 32, B1: 50, 'B1+': 58, B2: 68, C1: 82, C2: 95 };
 
 export default function ZipfScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { level } = useProfileStore();
   const { items } = useVaultStore();
-  const zipfCoverage = Math.min(100, (ZIPF_BASE[level] ?? 50) + Math.round(items.length / 40));
+
+  const inVault = (word: string) =>
+    items.some((v) => v.term.toLowerCase() === word.toLowerCase());
+
+  const band1 = ZIPF_TOP_500.filter((z) => z.rank <= 100);
+  const band2 = ZIPF_TOP_500.filter((z) => z.rank > 100 && z.rank <= 300);
+  const band3 = ZIPF_TOP_500.filter((z) => z.rank > 300 && z.rank <= 500);
+
+  const cov1 = band1.filter((z) => inVault(z.word)).length;
+  const cov2 = band2.filter((z) => inVault(z.word)).length;
+  const cov3 = band3.filter((z) => inVault(z.word)).length;
+  const total = cov1 + cov2 + cov3;
+  const pct   = ZIPF_TOP_500.length > 0
+    ? Math.round((total / ZIPF_TOP_500.length) * 100)
+    : 0;
+
+  function openBandTriagem(band: typeof band1, label: string) {
+    const suggestions = band
+      .filter((z) => !inVault(z.word))
+      .map((z) => ({
+        term: z.word,
+        type: z.type,
+        gloss: z.gloss,
+        example: z.example,
+        source: `Zipf #${z.rank}`,
+      }));
+    navigation.navigate('Triagem', {
+      suggestions,
+      title: 'Palavras Frequentes',
+      subtitle: label,
+    });
+  }
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -34,22 +67,21 @@ export default function ZipfScreen() {
           <View style={styles.heroCard}>
             <Text style={styles.heroEye}>SUA COBERTURA ATUAL</Text>
             <View style={styles.heroPctRow}>
-              <Text style={styles.heroPct}>{zipfCoverage}%</Text>
-              <Text style={styles.heroPctSub}>das top 2.000</Text>
+              <Text style={styles.heroPct}>{pct}%</Text>
+              <Text style={styles.heroPctSub}>das top 500</Text>
             </View>
             <Text style={styles.heroDesc}>
-              ~{Math.round(zipfCoverage / 100 * 2000).toLocaleString()} vocábulos cobrem grande parte de qualquer texto em inglês. Continue capturando para avançar.
+              ~{total.toLocaleString()} vocábulos cobrem grande parte de qualquer texto em inglês. Continue capturando para avançar.
             </Text>
 
             {/* coverage bar */}
             <View style={styles.coverageBar}>
-              <View style={[styles.coverageFill, { flex: zipfCoverage, backgroundColor: Colors.sand }]} />
-              <View style={[styles.coverageFill, { flex: 12, backgroundColor: 'rgba(244,234,213,0.5)' }]} />
-              <View style={[styles.coverageFill, { flex: 15, backgroundColor: 'rgba(244,234,213,0.2)' }]} />
+              <View style={[styles.coverageFill, { flex: pct, backgroundColor: Colors.sand }]} />
+              <View style={[styles.coverageFill, { flex: 100 - pct, backgroundColor: 'rgba(244,234,213,0.18)' }]} />
             </View>
             <View style={styles.coverageLegend}>
-              <Text style={styles.coverageLegendText}>DOMINA {Math.round(zipfCoverage / 100 * 2000).toLocaleString()}</Text>
-              <Text style={styles.coverageLegendText}>META: 2.000</Text>
+              <Text style={styles.coverageLegendText}>DOMINA {total.toLocaleString()}</Text>
+              <Text style={styles.coverageLegendText}>META: 500</Text>
             </View>
           </View>
         </View>
@@ -69,30 +101,38 @@ export default function ZipfScreen() {
           </PgCard>
         </View>
 
-        {/* Words to learn */}
-        <View style={{ paddingHorizontal: Spacing.lg }}>
-          <Text style={styles.sectionTitle}>Próximas a aprender</Text>
-          {ZIPF_WORDS.filter((w) => !w.known || w.focus).map((w) => (
-            <View
-              key={w.rank}
-              style={[styles.wordRow, w.focus && styles.wordRowFocus]}
-            >
-              <Text style={styles.wordRank}>#{w.rank}</Text>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.wordText}>{w.word}</Text>
-                <Text style={styles.wordMeta}>{w.type} · {w.freq} do corpus</Text>
+        {/* Bandas de frequência */}
+        <View style={{ paddingHorizontal: Spacing.lg, gap: 10, marginBottom: 20 }}>
+          {[
+            { band: band1, cov: cov1, total: 100,  label: '🏆 Top 1–100',    sub: 'Essenciais' },
+            { band: band2, cov: cov2, total: 200,  label: '⚡ Top 101–300',  sub: 'Frequentes' },
+            { band: band3, cov: cov3, total: 200,  label: '📈 Top 301–500',  sub: 'Avançadas' },
+          ].map(({ band, cov, total: tot, label, sub }) => {
+            const remaining = band.filter((z) => !inVault(z.word)).length;
+            return (
+              <View key={label} style={{ backgroundColor: Colors.paper, borderRadius: Radius.md, borderWidth: 0.5, borderColor: Colors.line, padding: 14 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <View>
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: Colors.ink }}>{label}</Text>
+                    <Text style={{ fontSize: 11, color: Colors.inkMute, marginTop: 1 }}>{sub} · {cov} / {tot} capturadas</Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => openBandTriagem(band, `${label} · ${remaining} para capturar`)}
+                    disabled={remaining === 0}
+                    style={{ backgroundColor: remaining === 0 ? Colors.mossSoft : Colors.moss, borderRadius: Radius.full, paddingHorizontal: 14, paddingVertical: 7 }}
+                    activeOpacity={0.85}
+                  >
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: remaining === 0 ? Colors.moss : Colors.sand }}>
+                      {remaining === 0 ? '✓ Completo' : `Treinar → ${remaining}`}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+                <View style={{ height: 4, backgroundColor: Colors.line, borderRadius: 2 }}>
+                  <View style={{ height: 4, backgroundColor: Colors.moss, borderRadius: 2, width: `${(cov / tot) * 100}%` as any }} />
+                </View>
               </View>
-              {w.focus ? (
-                <PgChip c={Colors.gold} soft="rgba(212,162,76,0.2)">
-                  FOCO
-                </PgChip>
-              ) : (
-                <TouchableOpacity style={styles.addBtn} activeOpacity={0.7}>
-                  <Icons.Plus size={16} color={Colors.moss} />
-                </TouchableOpacity>
-              )}
-            </View>
-          ))}
+            );
+          })}
         </View>
       </ScrollView>
     </SafeAreaView>
