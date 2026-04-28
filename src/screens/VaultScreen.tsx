@@ -25,9 +25,9 @@ function typeColor(type: VaultItem['type']) {
     case 'reduction':   return { c: Colors.ocean,   soft: Colors.oceanSoft };
     case 'collocation': return { c: Colors.gold,    soft: Colors.goldSoft };
     case 'phonetic':    return { c: Colors.coral,   soft: Colors.coralSoft };
-    case 'idiom':       return { c: '#A86B3C',      soft: Colors.goldSoft };
+    case 'idiom':       return { c: Colors.amber,   soft: Colors.amberSoft };
     case 'gap-filler':  return { c: Colors.inkMute, soft: Colors.line };
-    case 'chunk':       return { c: '#7C5CBF',      soft: '#E8DFF8' };
+    case 'chunk':       return { c: Colors.purple,  soft: Colors.purpleSoft };
     default:            return { c: Colors.moss,    soft: Colors.mossSoft };
   }
 }
@@ -214,7 +214,7 @@ const styles = StyleSheet.create({
   statValue: { fontSize: 22, fontWeight: '600', color: Colors.ink, fontFamily: undefined },
   pill: {
     flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: 12, paddingVertical: 7,
+    paddingHorizontal: 10, paddingVertical: 5,
     borderRadius: Radius.full,
     borderWidth: 1, borderColor: Colors.lineStrong,
   },
@@ -233,10 +233,10 @@ const styles = StyleSheet.create({
   itemFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   itemSource: { fontSize: 11, color: Colors.inkMute },
   fnBadge: {
-    backgroundColor: '#E8DFF8', borderRadius: Radius.full,
+    backgroundColor: Colors.purpleSoft, borderRadius: Radius.full,
     paddingHorizontal: 7, paddingVertical: 2,
   },
-  fnBadgeText: { fontSize: 9.5, fontWeight: '600', color: '#7C5CBF' },
+  fnBadgeText: { fontSize: 9.5, fontWeight: '600', color: Colors.purple },
   fab: {
     position: 'absolute', bottom: 30, right: 22,
     width: 56, height: 56, borderRadius: 28,
