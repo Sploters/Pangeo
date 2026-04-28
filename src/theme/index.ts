@@ -8,6 +8,10 @@ export const Colors = {
   inkMute: '#6E6A5F',
   line: 'rgba(26,26,23,0.10)',
   lineStrong: 'rgba(26,26,23,0.18)',
+  amber: '#C0832A',
+  amberSoft: '#F5E5C8',
+  purple: '#7C5CBF',
+  purpleSoft: '#E8DFF8',
 
   // Accent
   moss: '#2D5A3D',
