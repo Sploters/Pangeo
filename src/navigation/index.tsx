@@ -38,6 +38,8 @@ export type RootStackParamList = {
   NewsList: undefined;
   NewsArticle: { articleId: string };
   ContentDetail: { contentId: string };
+  Vault: undefined;
+  Discover: undefined;
 };
 
 export type TabParamList = {

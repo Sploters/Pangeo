@@ -119,6 +119,11 @@ export default function CaptureScreen() {
       strength: 0,
       tags: [],
       function: showFunctionPicker ? fn : undefined,
+      stability: 0,
+      difficulty: 5,
+      lapses: 0,
+      lastReviewAt: 0,
+      nextReviewAt: 0,
     });
     navigation.goBack();
   };
