@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, Animated,
 } from 'react-native';
@@ -16,6 +16,8 @@ function latencyLabel(ms: number): { text: string; color: string } {
   return { text: 'LENTO', color: Colors.coral };
 }
 
+const GRADE_MAP = { again: 1, hard: 2, good: 3, easy: 4 } as const;
+
 export default function SRSScreen() {
   const navigation = useNavigation();
   const { items, updateSRS } = useVaultStore();
@@ -30,8 +32,11 @@ export default function SRSScreen() {
   const startTimeRef = useRef<number>(Date.now());
 
   // Deck: items that need review (new or due, and must have a gloss)
-  const deck = items.filter(
-    (v) => (v.lastReviewAt === 0 || v.nextReviewAt <= Date.now()) && v.gloss.trim(),
+  const deck = useMemo(
+    () => items.filter(
+      (v) => (v.lastReviewAt === 0 || v.nextReviewAt <= Date.now()) && v.gloss.trim(),
+    ),
+    [items],
   );
   const card = deck[currentIdx];
 
@@ -40,6 +45,7 @@ export default function SRSScreen() {
     startTimeRef.current = Date.now();
     setCardLatencyMs(null);
     if (card) setIntervals(previewIntervals(card));
+    else setIntervals(null);
   }, [currentIdx]);
 
   const flip = () => {
@@ -52,9 +58,8 @@ export default function SRSScreen() {
     }).start(() => setFlipped(true));
   };
 
-  const GRADE_MAP = { again: 1, hard: 2, good: 3, easy: 4 } as const;
-
   const next = (difficulty: keyof typeof GRADE_MAP) => {
+    if (!card) return;
     const grade = GRADE_MAP[difficulty];
     const patch = card.lastReviewAt === 0 ? initFSRS(grade) : reviewFSRS(card, grade);
     updateSRS(card.id, patch);
