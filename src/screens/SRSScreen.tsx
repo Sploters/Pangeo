@@ -9,7 +9,6 @@ import { PgButton, PgChip, Icons } from '../components';
 import { useVaultStore, useProfileStore } from '../store';
 import { initFSRS, reviewFSRS, previewIntervals } from '../utils/fsrs';
 
-
 function latencyLabel(ms: number): { text: string; color: string } {
   if (ms < 2000) return { text: 'RÁPIDO', color: Colors.moss };
   if (ms < 4500) return { text: 'OK', color: Colors.gold };
@@ -43,6 +42,8 @@ export default function SRSScreen() {
   // Reset timer whenever a new card appears
   useEffect(() => {
     startTimeRef.current = Date.now();
+    setFlipped(false);
+    flipAnim.setValue(0);
     setCardLatencyMs(null);
     if (card) setIntervals(previewIntervals(card));
     else setIntervals(null);
@@ -66,8 +67,6 @@ export default function SRSScreen() {
 
     setSessionCards((c) => c + 1);
     trackStudySession(1);
-    setFlipped(false);
-    flipAnim.setValue(0);
 
     if (currentIdx + 1 < deck.length) {
       setCurrentIdx((i) => i + 1);
@@ -137,7 +136,7 @@ export default function SRSScreen() {
 
       {/* Card */}
       <View style={styles.cardArea}>
-        {!flipped && (
+        {!flipped ? (
           <Animated.View style={[styles.card, styles.cardFront, { transform: [{ rotateY: frontRotate }] }]}>
             <View style={{ position: 'absolute', top: 14, left: 14 }}>
               <PgChip c={Colors.coral} soft={Colors.coralSoft}>
@@ -152,9 +151,7 @@ export default function SRSScreen() {
             <Text style={styles.tapHint}>TOQUE PARA REVELAR</Text>
             <TouchableOpacity style={StyleSheet.absoluteFill} onPress={flip} activeOpacity={1} />
           </Animated.View>
-        )}
-
-        {flipped && (
+        ) : (
           <Animated.View style={[styles.card, styles.cardBack, { transform: [{ rotateY: backRotate }] }]}>
             {/* Latency badge */}
             {cardLatencyMs !== null && (() => {
@@ -178,9 +175,10 @@ export default function SRSScreen() {
                   <Text style={styles.backExample}>"{card.example}"</Text>
                 </>
               ) : null}
-              {card.source ? (
-                <Text style={styles.backSource}>{card.source}</Text>
-              ) : null}
+            </View>
+            <View style={styles.cardDebug}>
+              <Text style={styles.debugText}>S: {card.stability.toFixed(1)}d · D: {card.difficulty.toFixed(1)}</Text>
+              {card.source ? <Text style={styles.debugText}>{card.source}</Text> : null}
             </View>
           </Animated.View>
         )}
@@ -275,7 +273,8 @@ const styles = StyleSheet.create({
   backDivider: { height: 1, backgroundColor: 'rgba(244,234,213,0.18)', marginVertical: 16 },
   backContextLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 1, color: Colors.sand, opacity: 0.6 },
   backExample: { fontSize: 16, lineHeight: 24, marginTop: 6, fontStyle: 'italic', color: Colors.sand, opacity: 0.92 },
-  backSource: { fontSize: 11, color: Colors.sand, opacity: 0.5, marginTop: 12 },
+  cardDebug: { position: 'absolute', bottom: 18, left: 24, right: 24, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  debugText: { fontSize: 10, fontWeight: '600', color: Colors.sand, opacity: 0.5, fontFamily: 'monospace' },
   diffLabel: { fontSize: 10.5, fontWeight: '700', letterSpacing: 1, color: Colors.inkMute, textAlign: 'center', marginBottom: 10 },
   diffRow: { flexDirection: 'row', gap: 6 },
   diffBtn: { flex: 1, borderRadius: 12, paddingVertical: 12, alignItems: 'center' },
