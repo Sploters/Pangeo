@@ -9,37 +9,33 @@ import { SCHWA_WORDS, REDUCTIONS, CONNECTED_SPEECH, ConnectedSpeechPhenomenon } 
 type Tab = 'schwa' | 'reduce' | 'link' | 'assim' | 'elision';
 
 const TABS: { id: Tab; label: string; mono?: string; color: string; soft: string }[] = [
-  { id: 'schwa',  label: 'Schwa',        mono: '/ə/', color: Colors.coral,  soft: Colors.coralSoft },
-  { id: 'reduce', label: 'Reductions',               color: Colors.ocean,  soft: Colors.oceanSoft },
-  { id: 'link',   label: 'Linking',                  color: '#7C5CBF',     soft: '#E8DFF8' },
-  { id: 'assim',  label: 'Assimilação',              color: '#C0832A',     soft: '#F5E5C8' },
-  { id: 'elision',label: 'Elision',                  color: Colors.moss,   soft: Colors.mossSoft },
+  { id: 'schwa',   label: 'Schwa',      mono: '/ə/', color: Colors.coral,  soft: Colors.coralSoft },
+  { id: 'reduce',  label: 'Reductions',             color: Colors.ocean,  soft: Colors.oceanSoft },
+  { id: 'link',    label: 'Linking',                color: Colors.purple, soft: Colors.purpleSoft },
+  { id: 'assim',   label: 'Assimilação',            color: Colors.amber,  soft: Colors.amberSoft },
+  { id: 'elision', label: 'Elision',                color: Colors.moss,   soft: Colors.mossSoft },
 ];
 
 const PHENOMENON_META: Record<ConnectedSpeechPhenomenon, { title: string; description: string; color: string; soft: string }> = {
   linking: {
     title: 'Linking (Ligação)',
     description: 'Consoante final de uma palavra se liga à vogal inicial da próxima — sem pausa, como se fossem uma palavra só.',
-    color: '#7C5CBF',
-    soft: '#E8DFF8',
+    color: Colors.purple, soft: Colors.purpleSoft,
   },
   intrusion: {
     title: 'Intrusion (Intrusão)',
     description: 'Um som "fantasma" (/r/, /w/ ou /j/) aparece entre duas vogais para facilitar a transição — você não vê na escrita, mas ouve.',
-    color: '#7C5CBF',
-    soft: '#E8DFF8',
+    color: Colors.purple, soft: Colors.purpleSoft,
   },
   assimilation: {
     title: 'Assimilação',
     description: 'Um som muda para se aproximar do som vizinho. O exemplo clássico: /d/ + /j/ → /dʒ/ (como "did you" → "didja").',
-    color: '#C0832A',
-    soft: '#F5E5C8',
+    color: Colors.amber, soft: Colors.amberSoft,
   },
   elision: {
     title: 'Elision (Elisão)',
     description: 'Um som simplesmente desaparece na fala rápida, especialmente o /t/ e /d/ antes de consoantes. Nativo nem percebe — é automático.',
-    color: Colors.moss,
-    soft: Colors.mossSoft,
+    color: Colors.moss, soft: Colors.mossSoft,
   },
 };
 
@@ -321,6 +317,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg, paddingBottom: 14, gap: 6, flexDirection: 'row',
   },
   tab: {
+    height: 36,
     flexDirection: 'row', alignItems: 'center', gap: 5,
     paddingHorizontal: 14, paddingVertical: 9, borderRadius: 12,
     borderWidth: 0.5, borderColor: Colors.line, backgroundColor: Colors.paper,
