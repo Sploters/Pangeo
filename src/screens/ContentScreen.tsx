@@ -3,9 +3,12 @@ import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Colors, Radius, Spacing } from '../theme';
 import { PgChip, Icons } from '../components';
-import { CONTENT, ContentItem } from '../data/seed';
+import { CONTENT, ContentItem, NEWS_ARTICLES } from '../data/seed';
+import { RootStackParamList } from '../navigation';
 
 function kindIcon(kind: ContentItem['kind'], color: string) {
   switch (kind) {
@@ -17,6 +20,8 @@ function kindIcon(kind: ContentItem['kind'], color: string) {
 }
 
 export default function ContentScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 32 }}>
@@ -31,9 +36,42 @@ export default function ContentScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* News in Levels card */}
+        <TouchableOpacity
+          onPress={() => navigation.navigate('NewsList')}
+          style={{
+            backgroundColor: Colors.moss,
+            borderRadius: Radius.lg,
+            padding: 20,
+            marginHorizontal: Spacing.lg,
+            marginBottom: 20,
+          }}
+          activeOpacity={0.85}
+        >
+          <Text style={{ fontSize: 10, fontWeight: '700', letterSpacing: 1, color: Colors.mossSoft, textTransform: 'uppercase', marginBottom: 6 }}>
+            NOTÍCIAS EM INGLÊS
+          </Text>
+          <Text style={{ fontSize: 18, fontWeight: '700', color: Colors.sand, letterSpacing: -0.3, marginBottom: 4 }}>
+            News in Levels
+          </Text>
+          <Text style={{ fontSize: 13, color: Colors.mossSoft, lineHeight: 19, marginBottom: 14 }}>
+            Notícias reais em 3 níveis de dificuldade com vocabulário curado para capturar.
+          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <View style={{ backgroundColor: Colors.mossDeep, borderRadius: Radius.full, paddingHorizontal: 10, paddingVertical: 4 }}>
+              <Text style={{ fontSize: 11, fontWeight: '600', color: Colors.mossSoft }}>{NEWS_ARTICLES.length} artigos</Text>
+            </View>
+            <Text style={{ fontSize: 13, fontWeight: '700', color: Colors.sand }}>Ver notícias →</Text>
+          </View>
+        </TouchableOpacity>
+
         {/* Featured */}
         <View style={{ paddingHorizontal: Spacing.lg }}>
-          <TouchableOpacity style={styles.featured} activeOpacity={0.85}>
+          <TouchableOpacity
+            style={styles.featured}
+            onPress={() => navigation.navigate('ContentDetail', { contentId: CONTENT[0].id })}
+            activeOpacity={0.85}
+          >
             <View style={[styles.featuredArt, { backgroundColor: CONTENT[0].art }]}>
               {kindIcon(CONTENT[0].kind, '#FBF6EB')}
             </View>
@@ -55,7 +93,12 @@ export default function ContentScreen() {
         </View>
         <View style={{ paddingHorizontal: Spacing.lg, marginTop: 10, gap: 10 }}>
           {CONTENT.slice(1).map((c) => (
-            <TouchableOpacity key={c.id} style={styles.card} activeOpacity={0.8}>
+            <TouchableOpacity
+              key={c.id}
+              style={styles.card}
+              onPress={() => navigation.navigate('ContentDetail', { contentId: c.id })}
+              activeOpacity={0.8}
+            >
               <View style={[styles.cardArt, { backgroundColor: c.art }]}>
                 {kindIcon(c.kind, '#FBF6EB')}
               </View>
