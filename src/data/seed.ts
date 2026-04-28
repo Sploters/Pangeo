@@ -64,6 +64,27 @@ export type ContentItem = {
   art: string;
   why: string;
   tags: string[];
+  vocabulary?: VocabSuggestion[];   // ← new
+};
+
+export type VocabSuggestion = {
+  term: string;
+  type: VaultItem['type'];
+  gloss: string;
+  example?: string;
+  source: string;
+  level?: string;
+  function?: CommunicativeFunction;
+};
+
+export type NewsArticle = {
+  id: string;
+  title: string;
+  level: 1 | 2 | 3;
+  topic: string;
+  date: string;
+  text: string;
+  vocabulary: VocabSuggestion[];
 };
 
 export type TranscriptToken = {
