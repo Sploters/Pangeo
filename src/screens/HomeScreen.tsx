@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
 } from 'react-native';
@@ -8,13 +8,11 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Colors, Radius, Spacing } from '../theme';
 import { PgCard, PgRing, PgStrength, Icons } from '../components';
 import { useVaultStore, useProfileStore } from '../store';
-import { CONTENT } from '../data/seed';
+import { CONTENT, ZIPF_TOP_500, NEWS_ARTICLES } from '../data/seed';
 import { RootStackParamList } from '../navigation';
 
 const DAY_NAMES = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'];
 const MONTH_NAMES = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
-
-const ZIPF_BASE: Record<string, number> = { A1: 18, A2: 32, B1: 50, 'B1+': 58, B2: 68, C1: 82, C2: 95 };
 
 function typeColor(type: string) {
   switch (type) {
@@ -23,7 +21,7 @@ function typeColor(type: string) {
     case 'phonetic':    return { bg: Colors.coralSoft, c: Colors.coral,   char: 'ə' };
     case 'idiom':       return { bg: Colors.goldSoft,  c: '#A86B3C',      char: 'I' };
     case 'gap-filler':  return { bg: Colors.line,      c: Colors.inkMute, char: '…' };
-    case 'chunk':       return { bg: '#E8DFF8',        c: '#7C5CBF',      char: '⬡' };
+    case 'chunk':       return { bg: '#E8DFF8',        c: '#7C5CBF',      char: '⇅' };
     default:            return { bg: Colors.mossSoft,  c: Colors.moss,    char: 'V' };
   }
 }
@@ -31,17 +29,30 @@ function typeColor(type: string) {
 export default function HomeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const items = useVaultStore((s) => s.items);
-  const { name, level, streak } = useProfileStore();
+  const { name, streak } = useProfileStore();
+
+  const inVault = (word: string) =>
+    items.some((v) => v.term.toLowerCase() === word.toLowerCase());
+
+  // Suggestions for Triagem (Top 100 + News L1)
+  const triagemSuggestions = useMemo(() => {
+    const zipf = ZIPF_TOP_500.filter((z) => z.rank <= 100 && !inVault(z.word))
+      .map(z => ({ term: z.word, type: z.type, gloss: z.gloss, example: z.example, source: `Zipf #${z.rank}` }));
+    const news = NEWS_ARTICLES.filter((a) => a.level === 1)
+      .flatMap(a => a.vocabulary.filter(v => !inVault(v.term)));
+    return [...zipf, ...news];
+  }, [items]);
+
+  // Dynamic Coverage
+  const zipfCovCount = ZIPF_TOP_500.filter((z) => inVault(z.word)).length;
+  const zipfCoverage = ZIPF_TOP_500.length > 0
+    ? Math.round((zipfCovCount / ZIPF_TOP_500.length) * 100)
+    : 0;
 
   const now = new Date();
   const greetDate = `${DAY_NAMES[now.getDay()]} · ${now.getDate()} ${MONTH_NAMES[now.getMonth()]}`;
 
-  const dueCount = items.filter((v) => v.srs === 'due' || v.srs === 'new').length;
   const reviewableCount = items.filter((v) => v.srs !== 'mature' && v.gloss.trim()).length;
-
-  const zipfCoverage = Math.min(100, (ZIPF_BASE[level] ?? 50) + Math.round(items.length / 40));
-  const zipfWords = Math.round((zipfCoverage / 100) * 2000);
-
   const displayName = name || 'Você';
 
   return (
@@ -104,7 +115,7 @@ export default function HomeScreen() {
               </View>
 
               <View style={styles.heroFooter}>
-                <Text style={styles.heroSteps}>{level} · cobertura {zipfCoverage}%</Text>
+                <Text style={styles.heroSteps}>Cobertura Zipf {zipfCoverage}%</Text>
                 <TouchableOpacity
                   onPress={() => navigation.navigate('SRS')}
                   style={styles.heroCta}
@@ -150,7 +161,7 @@ export default function HomeScreen() {
                 <Icons.Wave size={18} color={Colors.ocean} />
               </View>
               <View style={styles.newBadge}>
-                <Text style={styles.newBadgeText}>5 tabs</Text>
+                <Text style={styles.newBadgeText}>Novo</Text>
               </View>
             </View>
             <Text style={styles.quickLabel}>Connected Speech</Text>
@@ -158,11 +169,43 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* Pending Triagem */}
+        {triagemSuggestions.length > 0 && (
+          <View style={{ paddingHorizontal: Spacing.lg, marginTop: 20 }}>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('Triagem', {
+                suggestions: triagemSuggestions,
+                title: 'Triagem Diária',
+                subtitle: `${triagemSuggestions.length} palavras sugeridas`,
+              })}
+              style={{
+                backgroundColor: Colors.paper, borderRadius: Radius.md,
+                borderWidth: 1, borderColor: Colors.moss,
+                padding: 14, flexDirection: 'row', alignItems: 'center', gap: 12
+              }}
+              activeOpacity={0.8}
+            >
+              <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: Colors.mossSoft, alignItems: 'center', justifyContent: 'center' }}>
+                <Icons.Vault size={20} color={Colors.moss} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: Colors.ink }}>Triagem pendente</Text>
+                <Text style={{ fontSize: 11, color: Colors.inkMute, marginTop: 1 }}>
+                  {triagemSuggestions.length} palavras frequentes prontas para o seu Vault.
+                </Text>
+              </View>
+              <Icons.Next size={16} color={Colors.moss} />
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Content row */}
         <View style={{ paddingHorizontal: Spacing.lg, marginTop: 20 }}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Continue ouvindo</Text>
-            <Text style={styles.sectionAction}>Tudo →</Text>
+            <TouchableOpacity activeOpacity={0.7} onPress={() => navigation.navigate('Discover')}>
+              <Text style={styles.sectionAction}>Tudo →</Text>
+            </TouchableOpacity>
           </View>
         </View>
         <ScrollView
@@ -170,7 +213,12 @@ export default function HomeScreen() {
           contentContainerStyle={{ paddingLeft: Spacing.lg, paddingRight: 8, gap: 10, paddingTop: 8 }}
         >
           {CONTENT.slice(0, 3).map((c) => (
-            <TouchableOpacity key={c.id} style={styles.contentCard} activeOpacity={0.8}>
+            <TouchableOpacity
+              key={c.id}
+              style={styles.contentCard}
+              onPress={() => navigation.navigate('ContentDetail', { contentId: c.id })}
+              activeOpacity={0.8}
+            >
               <View style={[styles.contentArt, { backgroundColor: c.art }]}>
                 {c.kind === 'podcast' && <Icons.Headphones size={28} color="#FBF6EB" />}
                 {c.kind === 'book' && <Icons.Book size={28} color="#FBF6EB" />}
@@ -197,7 +245,7 @@ export default function HomeScreen() {
               <View style={{ flex: 1 }}>
                 <Text style={styles.zipfLabel}>COBERTURA ZIPF</Text>
                 <Text style={styles.zipfText}>
-                  ~{zipfWords.toLocaleString()} das 2.000 palavras mais frequentes
+                  {zipfCovCount} das 500 palavras mais frequentes
                 </Text>
                 <TouchableOpacity onPress={() => navigation.navigate('Zipf')} activeOpacity={0.7}>
                   <Text style={styles.zipfCta}>Ver mapa →</Text>
@@ -212,7 +260,9 @@ export default function HomeScreen() {
           <View style={{ paddingHorizontal: Spacing.lg, marginTop: 20 }}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Capturado recentemente</Text>
-              <Text style={styles.sectionAction}>Vault →</Text>
+              <TouchableOpacity activeOpacity={0.7} onPress={() => navigation.navigate('Vault')}>
+                <Text style={styles.sectionAction}>Vault →</Text>
+              </TouchableOpacity>
             </View>
             <View style={{ marginTop: 8 }}>
               {items.slice(0, 3).map((v) => {
