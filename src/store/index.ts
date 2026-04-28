@@ -21,7 +21,7 @@ function dayOfWeekIdx() {
 type VaultStore = {
   items: VaultItem[];
   addItem: (item: Omit<VaultItem, 'id'>) => void;
-  updateSRS: (id: number, srs: VaultItem['srs'], strength: number) => void;
+  updateSRS: (id: number, patch: Partial<VaultItem>) => void;
 };
 
 export const useVaultStore = create<VaultStore>()(
@@ -30,9 +30,9 @@ export const useVaultStore = create<VaultStore>()(
       items: [],
       addItem: (item) =>
         set((s) => ({ items: [{ ...item, id: Date.now() }, ...s.items] })),
-      updateSRS: (id, srs, strength) =>
+      updateSRS: (id, patch) =>
         set((s) => ({
-          items: s.items.map((v) => (v.id === id ? { ...v, srs, strength } : v)),
+          items: s.items.map((v) => (v.id === id ? { ...v, ...patch } : v)),
         })),
     }),
     { name: 'pangeo-vault-v2', storage: createJSONStorage(() => AsyncStorage) }
