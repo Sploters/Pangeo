@@ -1,3 +1,169 @@
-import React from 'react';
-import { View } from 'react-native';
-export default function NewsArticleScreen() { return <View />; }
+import React, { useState, useMemo } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Modal } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Colors, Radius, Spacing } from '../theme';
+import { Icons } from '../components';
+import { NEWS_ARTICLES, VocabSuggestion } from '../data/seed';
+import { RootStackParamList } from '../navigation';
+import { useVaultStore } from '../store';
+
+type Nav   = NativeStackNavigationProp<RootStackParamList>;
+type Route = RouteProp<RootStackParamList, 'NewsArticle'>;
+
+const LEVEL_META: Record<1|2|3, { color: string; soft: string; label: string }> = {
+  1: { color: Colors.moss,  soft: Colors.mossSoft,  label: 'Level 1 · A2' },
+  2: { color: Colors.ocean, soft: Colors.oceanSoft, label: 'Level 2 · B1' },
+  3: { color: Colors.coral, soft: Colors.coralSoft, label: 'Level 3 · B2' },
+};
+
+export default function NewsArticleScreen() {
+  const navigation = useNavigation<Nav>();
+  const route      = useRoute<Route>();
+  const { items }  = useVaultStore();
+
+  const article = NEWS_ARTICLES.find((a) => a.id === route.params.articleId)!;
+  const meta    = LEVEL_META[article.level];
+
+  const vocabTerms = useMemo(
+    () => new Set(article.vocabulary.map((v) => v.term.toLowerCase())),
+    [article],
+  );
+
+  const allCaptured = article.vocabulary.every((v) =>
+    items.some((i) => i.term.toLowerCase() === v.term.toLowerCase()),
+  );
+
+  const pending = article.vocabulary.filter(
+    (v) => !items.some((i) => i.term.toLowerCase() === v.term.toLowerCase()),
+  );
+
+  const [tooltip, setTooltip] = useState<VocabSuggestion | null>(null);
+
+  // Split text into word tokens, marking vocab words
+  const tokens = useMemo(() => {
+    return article.text.split(/(\s+)/).map((token, i) => {
+      const clean = token.replace(/[^a-zA-Z'-]/g, '').toLowerCase();
+      const matched = article.vocabulary.find((v) => {
+        const vWords = v.term.toLowerCase().split(' ');
+        return vWords.length === 1 && vWords[0] === clean;
+      });
+      return { raw: token, key: i, vocab: matched ?? null };
+    });
+  }, [article]);
+
+  return (
+    <SafeAreaView style={s.safe}>
+      <View style={s.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={s.backBtn} activeOpacity={0.7}>
+          <Icons.Back size={20} color={Colors.ink} />
+        </TouchableOpacity>
+        <View style={[s.levelBadge, { backgroundColor: meta.soft }]}>
+          <Text style={[s.levelText, { color: meta.color }]}>{meta.label}</Text>
+        </View>
+      </View>
+
+      <ScrollView contentContainerStyle={s.content}>
+        <Text style={s.title}>{article.title}</Text>
+        <Text style={s.date}>{article.date}</Text>
+
+        {/* Article text with vocab highlights */}
+        <View style={s.textBlock}>
+          <Text style={s.articleText}>
+            {tokens.map((t) =>
+              t.vocab ? (
+                <Text
+                  key={t.key}
+                  style={s.vocabWord}
+                  onPress={() => setTooltip(t.vocab)}
+                >
+                  {t.raw}
+                </Text>
+              ) : (
+                <Text key={t.key}>{t.raw}</Text>
+              ),
+            )}
+          </Text>
+        </View>
+
+        {/* Vocab list preview */}
+        <View style={s.vocabSection}>
+          <Text style={s.vocabLabel}>VOCABULÁRIO DO ARTIGO</Text>
+          {article.vocabulary.map((v, i) => {
+            const inVault = items.some((item) => item.term.toLowerCase() === v.term.toLowerCase());
+            return (
+              <View key={i} style={s.vocabRow}>
+                <Text style={[s.vocabTerm, inVault && { color: Colors.moss }]}>{v.term}</Text>
+                {inVault && <Text style={s.vocabCheck}>✓</Text>}
+              </View>
+            );
+          })}
+        </View>
+      </ScrollView>
+
+      {/* Footer CTA */}
+      <View style={s.footer}>
+        <TouchableOpacity
+          style={[s.ctaBtn, allCaptured && s.ctaBtnDone]}
+          disabled={allCaptured}
+          onPress={() =>
+            navigation.navigate('Triagem', {
+              suggestions: pending,
+              title: 'Vocabulário do Artigo',
+              subtitle: article.title,
+            })
+          }
+          activeOpacity={0.85}
+        >
+          <Text style={[s.ctaText, allCaptured && { color: Colors.moss }]}>
+            {allCaptured
+              ? '✓ Vocabulário capturado'
+              : `Revisar vocabulário · ${pending.length} palavras →`}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Tooltip modal */}
+      {tooltip && (
+        <Modal transparent animationType="fade" onRequestClose={() => setTooltip(null)}>
+          <TouchableOpacity style={s.overlay} activeOpacity={1} onPress={() => setTooltip(null)}>
+            <View style={s.tooltipCard}>
+              <Text style={s.tooltipTerm}>{tooltip.term}</Text>
+              <Text style={s.tooltipGloss}>{tooltip.gloss}</Text>
+              {tooltip.example && <Text style={s.tooltipExample}>"{tooltip.example}"</Text>}
+            </View>
+          </TouchableOpacity>
+        </Modal>
+      )}
+    </SafeAreaView>
+  );
+}
+
+const s = StyleSheet.create({
+  safe:         { flex: 1, backgroundColor: Colors.sand },
+  header:       { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: Spacing.lg, paddingTop: 14, paddingBottom: Spacing.sm },
+  backBtn:      { width: 38, height: 38, borderRadius: Radius.full, backgroundColor: Colors.paper, borderWidth: 0.5, borderColor: Colors.line, alignItems: 'center', justifyContent: 'center' },
+  levelBadge:   { borderRadius: Radius.full, paddingHorizontal: 10, paddingVertical: 4 },
+  levelText:    { fontSize: 11, fontWeight: '700', letterSpacing: 0.5 },
+  content:      { paddingHorizontal: Spacing.lg, paddingBottom: 100 },
+  title:        { fontSize: 20, fontWeight: '700', color: Colors.ink, letterSpacing: -0.4, lineHeight: 28, marginBottom: 6 },
+  date:         { fontSize: 11, color: Colors.inkMute, marginBottom: 18 },
+  textBlock:    { marginBottom: 24 },
+  articleText:  { fontSize: 15, color: Colors.ink, lineHeight: 26 },
+  vocabWord:    { color: Colors.ocean, textDecorationLine: 'underline', textDecorationStyle: 'dotted', textDecorationColor: Colors.ocean },
+  vocabSection: { backgroundColor: Colors.paper, borderRadius: Radius.md, borderWidth: 0.5, borderColor: Colors.line, padding: 14, gap: 8 },
+  vocabLabel:   { fontSize: 10, fontWeight: '700', letterSpacing: 0.8, color: Colors.inkMute, textTransform: 'uppercase', marginBottom: 4 },
+  vocabRow:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  vocabTerm:    { fontSize: 14, fontWeight: '500', color: Colors.inkSoft },
+  vocabCheck:   { fontSize: 13, color: Colors.moss, fontWeight: '700' },
+  footer:       { position: 'absolute', bottom: 0, left: 0, right: 0, padding: Spacing.lg, backgroundColor: Colors.sand, borderTopWidth: 0.5, borderTopColor: Colors.line },
+  ctaBtn:       { backgroundColor: Colors.moss, borderRadius: Radius.full, height: 50, alignItems: 'center', justifyContent: 'center' },
+  ctaBtnDone:   { backgroundColor: Colors.mossSoft },
+  ctaText:      { fontSize: 14, fontWeight: '700', color: Colors.sand },
+  overlay:      { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center', padding: 32 },
+  tooltipCard:  { backgroundColor: Colors.paper, borderRadius: Radius.lg, padding: 20, width: '100%' },
+  tooltipTerm:  { fontSize: 20, fontWeight: '700', color: Colors.ink, marginBottom: 8 },
+  tooltipGloss: { fontSize: 15, color: Colors.inkSoft, lineHeight: 22, marginBottom: 8 },
+  tooltipExample:{ fontSize: 13, fontStyle: 'italic', color: Colors.inkMute, lineHeight: 19 },
+});
