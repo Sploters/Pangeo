@@ -29,7 +29,10 @@ function typeColor(type: string) {
 export default function HomeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const items = useVaultStore((s) => s.items);
-  const { name, streak } = useProfileStore();
+  const { name, streak, dailyGoal, todayReviewed } = useProfileStore();
+
+  const missionPct = Math.min(1, dailyGoal > 0 ? todayReviewed / dailyGoal : 0);
+  const missionDone = todayReviewed >= dailyGoal;
 
   const inVault = (word: string) =>
     items.some((v) => v.term.toLowerCase() === word.toLowerCase());
@@ -126,6 +129,36 @@ export default function HomeScreen() {
               </View>
             </View>
           )}
+        </View>
+
+        {/* Daily Mission */}
+        <View style={{ paddingHorizontal: Spacing.lg, marginTop: 12 }}>
+          <View style={{
+            backgroundColor: Colors.paper, borderRadius: Radius.md,
+            borderWidth: 0.5, borderColor: missionDone ? Colors.moss : Colors.line,
+            padding: 14,
+          }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+              <View>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: Colors.ink }}>
+                  {missionDone ? '✓ Meta do dia concluída!' : 'Meta do dia'}
+                </Text>
+                <Text style={{ fontSize: 11, color: Colors.inkMute, marginTop: 1 }}>
+                  {todayReviewed} / {dailyGoal} cards revisados
+                </Text>
+              </View>
+              <Text style={{ fontSize: 22, fontWeight: '700', color: missionDone ? Colors.moss : Colors.ink }}>
+                {Math.round(missionPct * 100)}%
+              </Text>
+            </View>
+            <View style={{ height: 6, backgroundColor: Colors.line, borderRadius: 3 }}>
+              <View style={{
+                height: 6, borderRadius: 3,
+                backgroundColor: missionDone ? Colors.moss : Colors.ocean,
+                width: `${missionPct * 100}%` as any,
+              }} />
+            </View>
+          </View>
         </View>
 
         {/* Quick actions */}

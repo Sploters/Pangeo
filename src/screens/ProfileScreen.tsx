@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
 } from 'react-native';
@@ -16,8 +16,27 @@ const LEVEL_BONUS: Record<string, number> = { A1: 20, A2: 32, B1: 48, 'B1+': 56,
 
 export default function ProfileScreen() {
   const navigation = useNavigation();
-  const { name, level, streak, bestStreak, weeklyCards, avgLatencyMs, latencySamples } = useProfileStore();
+  const { name, level, streak, bestStreak, weeklyCards, avgLatencyMs, latencySamples, dailyGoal, setDailyGoal } = useProfileStore();
   const { items } = useVaultStore();
+
+  const calendarDays = useMemo(() => {
+    const days: { label: string; count: number; isToday: boolean }[] = [];
+    const now = new Date();
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(now);
+      d.setDate(now.getDate() + i);
+      const startMs = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+      const endMs   = startMs + 86_400_000;
+      const count = i === 0
+        ? items.filter((v) => v.nextReviewAt <= Date.now() && v.gloss.trim()).length
+        : items.filter((v) => v.nextReviewAt >= startMs && v.nextReviewAt < endMs && v.gloss.trim()).length;
+      const DOW = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+      days.push({ label: i === 0 ? 'Hoje' : DOW[d.getDay()], count, isToday: i === 0 });
+    }
+    return days;
+  }, [items]);
+
+  const calendarMax = Math.max(1, ...calendarDays.map((d) => d.count));
 
   // Computed stats
   const totalWords = items.length;
@@ -212,6 +231,67 @@ export default function ProfileScreen() {
               </View>
             )}
           </PgCard>
+        </View>
+
+        {/* 7-day review forecast */}
+        <View style={{ paddingHorizontal: Spacing.lg, marginTop: 24, marginBottom: 8 }}>
+          <Text style={styles.sectionTitle}>
+            Previsão de revisões
+          </Text>
+          <View style={{
+            backgroundColor: Colors.paper, borderRadius: Radius.md,
+            borderWidth: 0.5, borderColor: Colors.line, padding: 16,
+          }}>
+            <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 6, height: 80 }}>
+              {calendarDays.map((day, i) => {
+                const barHeight = calendarMax > 0 ? Math.max(4, (day.count / calendarMax) * 72) : 4;
+                return (
+                  <View key={i} style={{ flex: 1, alignItems: 'center', gap: 4 }}>
+                    <Text style={{ fontSize: 10, fontWeight: '700', color: day.count > 0 ? Colors.ink : Colors.inkMute }}>
+                      {day.count > 0 ? day.count : ''}
+                    </Text>
+                    <View style={{
+                      width: '100%', height: barHeight,
+                      backgroundColor: day.isToday ? Colors.coral : Colors.moss,
+                      borderRadius: 3, opacity: day.count === 0 ? 0.25 : 1,
+                    }} />
+                    <Text style={{
+                      fontSize: 10, fontWeight: day.isToday ? '700' : '500',
+                      color: day.isToday ? Colors.coral : Colors.inkMute,
+                    }}>
+                      {day.label}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+        </View>
+
+        {/* Daily Goal Setting */}
+        <View style={{ paddingHorizontal: Spacing.lg, marginTop: 12, marginBottom: 12 }}>
+          <Text style={styles.sectionTitle}>
+            Meta diária
+          </Text>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            {[5, 10, 15, 20, 30].map((n) => (
+              <TouchableOpacity
+                key={n}
+                onPress={() => setDailyGoal(n)}
+                style={{
+                  flex: 1, paddingVertical: 10, borderRadius: Radius.md,
+                  backgroundColor: dailyGoal === n ? Colors.moss : Colors.paper,
+                  borderWidth: 0.5, borderColor: dailyGoal === n ? Colors.moss : Colors.line,
+                  alignItems: 'center',
+                }}
+                activeOpacity={0.8}
+              >
+                <Text style={{ fontSize: 14, fontWeight: '700', color: dailyGoal === n ? Colors.sand : Colors.ink }}>
+                  {n}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
 
         {/* Zipf */}

@@ -62,6 +62,8 @@ type ProfileStore = {
   latencySamples: number; // total samples recorded (for rolling average)
   studyIntensity: StudyIntensity;
   clozeEnabled: boolean;
+  dailyGoal: number;        // target reviews per day (default 15)
+  todayReviewed: number;    // cards reviewed today (resets on new day)
   setName: (n: string) => void;
   setLevel: (l: string) => void;
   setOnboarded: () => void;
@@ -69,6 +71,7 @@ type ProfileStore = {
   recordLatency: (ms: number) => void;
   setStudyIntensity: (i: StudyIntensity) => void;
   setClozeEnabled: (v: boolean) => void;
+  setDailyGoal: (n: number) => void;
 };
 
 export const useProfileStore = create<ProfileStore>()(
@@ -85,11 +88,14 @@ export const useProfileStore = create<ProfileStore>()(
       latencySamples: 0,
       studyIntensity: 'moderate' as StudyIntensity,
       clozeEnabled: false,
+      dailyGoal: 15,
+      todayReviewed: 0,
       setName: (name) => set({ name }),
       setLevel: (level) => set({ level }),
       setOnboarded: () => set({ onboarded: true }),
       setStudyIntensity: (studyIntensity) => set({ studyIntensity }),
       setClozeEnabled: (clozeEnabled) => set({ clozeEnabled }),
+      setDailyGoal: (dailyGoal) => set({ dailyGoal }),
       recordLatency: (ms) =>
         set((s) => {
           const samples = s.latencySamples + 1;
@@ -112,11 +118,16 @@ export const useProfileStore = create<ProfileStore>()(
           const idx = dayOfWeekIdx();
           const weekly = [...s.weeklyCards];
           weekly[idx] = s.lastStudyDate === today ? weekly[idx] + cards : cards;
+          // todayReviewed: reset on new day, accumulate same day
+          const todayReviewed = s.lastStudyDate === today
+            ? s.todayReviewed + cards
+            : cards;
           return {
             streak: newStreak,
             bestStreak: newBest,
             lastStudyDate: today,
             weeklyCards: weekly,
+            todayReviewed,
           };
         }),
     }),
