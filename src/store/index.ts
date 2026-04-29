@@ -61,12 +61,14 @@ type ProfileStore = {
   avgLatencyMs: number;   // rolling average response latency across all SRS reviews
   latencySamples: number; // total samples recorded (for rolling average)
   studyIntensity: StudyIntensity;
+  clozeEnabled: boolean;
   setName: (n: string) => void;
   setLevel: (l: string) => void;
   setOnboarded: () => void;
   trackStudySession: (cards: number) => void;
   recordLatency: (ms: number) => void;
   setStudyIntensity: (i: StudyIntensity) => void;
+  setClozeEnabled: (v: boolean) => void;
 };
 
 export const useProfileStore = create<ProfileStore>()(
@@ -82,10 +84,12 @@ export const useProfileStore = create<ProfileStore>()(
       avgLatencyMs: 0,
       latencySamples: 0,
       studyIntensity: 'moderate' as StudyIntensity,
+      clozeEnabled: false,
       setName: (name) => set({ name }),
       setLevel: (level) => set({ level }),
       setOnboarded: () => set({ onboarded: true }),
       setStudyIntensity: (studyIntensity) => set({ studyIntensity }),
+      setClozeEnabled: (clozeEnabled) => set({ clozeEnabled }),
       recordLatency: (ms) =>
         set((s) => {
           const samples = s.latencySamples + 1;

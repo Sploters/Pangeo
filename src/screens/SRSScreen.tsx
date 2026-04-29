@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, Animated, ScrollView,
+  View, Text, TouchableOpacity, StyleSheet, Animated, ScrollView, TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -29,11 +29,17 @@ const INTENSITY_OPTIONS: { key: StudyIntensity; lbl: string; sub: string; icon: 
   { key: 'all',      lbl: 'Tudo',     sub: 'sem limite', icon: '💪', limit: Infinity },
 ];
 
+function buildCloze(example: string, term: string): string | null {
+  if (!example.trim()) return null;
+  const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const re = new RegExp(`\\b${escaped}\\b`, 'i');
+  return re.test(example) ? example.replace(re, '___') : null;
+}
 
 export default function SRSScreen() {
   const navigation = useNavigation();
   const { items, updateSRS } = useVaultStore();
-  const { trackStudySession, recordLatency, avgLatencyMs, studyIntensity, setStudyIntensity } = useProfileStore();
+  const { trackStudySession, recordLatency, avgLatencyMs, studyIntensity, setStudyIntensity, clozeEnabled, setClozeEnabled } = useProfileStore();
 
   const [phase, setPhase] = useState<'pick' | 'session'>('pick');
   const [selectedIntensity, setSelectedIntensity] = useState<StudyIntensity>(studyIntensity);
@@ -42,6 +48,9 @@ export default function SRSScreen() {
   const [sessionCards, setSessionCards] = useState(0);
   const [cardLatencyMs, setCardLatencyMs] = useState<number | null>(null);
   const [intervals, setIntervals] = useState<Record<1|2|3|4, string> | null>(null);
+  const [clozeAnswer, setClozeAnswer] = useState('');
+  const [clozeSubmitted, setClozeSubmitted] = useState(false);
+  const [clozeCorrect, setClozeCorrect] = useState(false);
   const flipAnim = useRef(new Animated.Value(0)).current;
   const startTimeRef = useRef<number>(Date.now());
 
@@ -62,6 +71,13 @@ export default function SRSScreen() {
 
   const card = sessionDeck[currentIdx];
 
+  const clozeSentence = useMemo(() => {
+    if (!card || !clozeEnabled) return null;
+    return buildCloze(card.example, card.term);
+  }, [card, clozeEnabled]);
+
+  const cardMode: 'flashcard' | 'cloze' = clozeSentence ? 'cloze' : 'flashcard';
+
   // Estimated seconds per card (recall time + ~5s to rate)
   const secPerCard = avgLatencyMs > 0 ? avgLatencyMs / 1000 + 5 : 8;
 
@@ -70,6 +86,9 @@ export default function SRSScreen() {
     if (phase !== 'session') return;
     startTimeRef.current = Date.now();
     setFlipped(false);
+    setClozeAnswer('');
+    setClozeSubmitted(false);
+    setClozeCorrect(false);
     flipAnim.setValue(0);
     setCardLatencyMs(null);
     if (card) setIntervals(previewIntervals(card));
@@ -91,6 +110,16 @@ export default function SRSScreen() {
     setCurrentIdx(0);
     setSessionCards(0);
     setPhase('session');
+  };
+
+  const submitCloze = () => {
+    const elapsed = Date.now() - startTimeRef.current;
+    setCardLatencyMs(elapsed);
+    recordLatency(elapsed);
+    const correct = clozeAnswer.trim().toLowerCase() === card.term.trim().toLowerCase();
+    setClozeCorrect(correct);
+    setClozeSubmitted(true);
+    if (card) setIntervals(previewIntervals(card));
   };
 
   const next = (difficulty: keyof typeof GRADE_MAP) => {
@@ -190,6 +219,37 @@ export default function SRSScreen() {
             })}
           </View>
 
+          <TouchableOpacity
+            onPress={() => setClozeEnabled(!clozeEnabled)}
+            style={{
+              flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+              marginTop: 14, backgroundColor: Colors.paper,
+              borderRadius: Radius.md, borderWidth: 0.5, borderColor: Colors.line, padding: 16,
+            }}
+            activeOpacity={0.8}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <Text style={{ fontSize: 22 }}>✏️</Text>
+              <View>
+                <Text style={{ fontSize: 15, fontWeight: '700', color: Colors.ink }}>Modo cloze</Text>
+                <Text style={{ fontSize: 12, color: Colors.inkMute, marginTop: 2 }}>
+                  Preencher a lacuna nas frases de exemplo
+                </Text>
+              </View>
+            </View>
+            <View style={{
+              width: 44, height: 26, borderRadius: 13,
+              backgroundColor: clozeEnabled ? Colors.moss : Colors.line,
+              alignItems: 'center', justifyContent: 'center',
+              paddingHorizontal: 2,
+            }}>
+              <View style={{
+                width: 22, height: 22, borderRadius: 11, backgroundColor: Colors.sand,
+                alignSelf: clozeEnabled ? 'flex-end' : 'flex-start',
+              }} />
+            </View>
+          </TouchableOpacity>
+
           <View style={{ marginTop: 24 }}>
             <PgButton full variant="primary" onPress={startSession}>
               Começar sessão
@@ -227,9 +287,49 @@ export default function SRSScreen() {
         ))}
       </View>
 
-      {/* Card */}
+      {/* Card Area */}
       <View style={styles.cardArea}>
-        {!flipped ? (
+        {cardMode === 'cloze' ? (
+          <View style={[styles.card, styles.cardFront, { justifyContent: 'flex-start', paddingTop: 20 }]}>
+            <View style={{ position: 'absolute', top: 14, left: 14 }}>
+              <PgChip c={Colors.ocean} soft={Colors.oceanSoft}>CLOZE</PgChip>
+            </View>
+            <View style={{ width: '100%', marginTop: 32 }}>
+              <Text style={{ fontSize: 16, color: Colors.ink, lineHeight: 26, textAlign: 'center', marginBottom: 20 }}>
+                {clozeSubmitted
+                  ? clozeSentence!.replace('___', card.term)
+                  : clozeSentence}
+              </Text>
+              {clozeSubmitted ? (
+                <View style={{ alignItems: 'center', gap: 6 }}>
+                  <Text style={{
+                    fontSize: 13, fontWeight: '700', letterSpacing: 0.5,
+                    color: clozeCorrect ? Colors.moss : Colors.coral,
+                  }}>
+                    {clozeCorrect ? '✓ Correto!' : `✗ Era: ${card.term}`}
+                  </Text>
+                  <Text style={{ fontSize: 13, color: Colors.inkMute }}>{card.gloss}</Text>
+                </View>
+              ) : (
+                <TextInput
+                  value={clozeAnswer}
+                  onChangeText={setClozeAnswer}
+                  placeholder="Digite a palavra..."
+                  placeholderTextColor={Colors.inkMute}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  style={{
+                    borderWidth: 1, borderColor: Colors.line,
+                    borderRadius: Radius.md, padding: 12,
+                    fontSize: 16, color: Colors.ink, backgroundColor: Colors.paper,
+                    textAlign: 'center',
+                  }}
+                  onSubmitEditing={submitCloze}
+                />
+              )}
+            </View>
+          </View>
+        ) : !flipped ? (
           <Animated.View style={[styles.card, styles.cardFront, { transform: [{ rotateY: frontRotate }] }]}>
             <View style={{ position: 'absolute', top: 14, left: 14 }}>
               <PgChip c={Colors.coral} soft={Colors.coralSoft}>
@@ -277,8 +377,40 @@ export default function SRSScreen() {
         )}
       </View>
 
-      {/* Difficulty or Reveal */}
-      {flipped && intervals ? (
+      {/* Difficulty or Reveal / Verify */}
+      {cardMode === 'cloze' ? (
+        clozeSubmitted && intervals ? (
+          <View style={{ paddingHorizontal: 14, paddingBottom: 18 }}>
+            <Text style={styles.diffLabel}>QUÃO BEM VOCÊ LEMBROU?</Text>
+            <View style={styles.diffRow}>
+              {(
+                [
+                  { key: 'again' as const, lbl: 'De novo', grade: 1 as const, c: '#B43E2A', bg: Colors.coralSoft },
+                  { key: 'hard'  as const, lbl: 'Difícil',  grade: 2 as const, c: '#A86B3C', bg: Colors.goldSoft },
+                  { key: 'good'  as const, lbl: 'Bom',      grade: 3 as const, c: Colors.mossDeep, bg: Colors.mossSoft },
+                  { key: 'easy'  as const, lbl: 'Fácil',    grade: 4 as const, c: Colors.ocean,    bg: Colors.oceanSoft },
+                ] as const
+              ).map((d) => (
+                <TouchableOpacity
+                  key={d.key}
+                  onPress={() => next(d.key)}
+                  style={[styles.diffBtn, { backgroundColor: d.bg }]}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.diffLbl, { color: d.c }]}>{d.lbl}</Text>
+                  <Text style={[styles.diffSub, { color: d.c }]}>{intervals[d.grade]}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        ) : (
+          <View style={{ paddingHorizontal: Spacing.lg, paddingBottom: 22 }}>
+            <PgButton full variant="primary" onPress={submitCloze} disabled={!clozeAnswer.trim()}>
+              Verificar
+            </PgButton>
+          </View>
+        )
+      ) : flipped && intervals ? (
         <View style={{ paddingHorizontal: 14, paddingBottom: 18 }}>
           <Text style={styles.diffLabel}>QUÃO BEM VOCÊ LEMBROU?</Text>
           <View style={styles.diffRow}>

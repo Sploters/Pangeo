@@ -20,19 +20,20 @@ export function PgCard({
 // ─── PgButton ────────────────────────────────────────────────────────────────
 type BtnVariant = 'primary' | 'secondary' | 'ghost';
 export function PgButton({
-  children, variant = 'primary', full, onPress, style,
+  children, variant = 'primary', full, onPress, style, disabled,
 }: {
   children: React.ReactNode;
   variant?: BtnVariant;
   full?: boolean;
   onPress?: () => void;
   style?: ViewStyle;
+  disabled?: boolean;
 }) {
   const bg =
-    variant === 'primary' ? Colors.moss :
+    variant === 'primary' ? (disabled ? Colors.mossSoft : Colors.moss) :
     variant === 'secondary' ? Colors.paper : 'transparent';
   const color =
-    variant === 'primary' ? Colors.sand :
+    variant === 'primary' ? (disabled ? Colors.moss : Colors.sand) :
     variant === 'secondary' ? Colors.ink : Colors.ink;
   const border =
     variant === 'secondary' ? { borderWidth: 0.5, borderColor: Colors.lineStrong } : {};
@@ -40,6 +41,7 @@ export function PgButton({
   return (
     <TouchableOpacity
       onPress={onPress}
+      disabled={disabled}
       style={[
         styles.btn,
         { backgroundColor: bg, flex: full ? 1 : 0 },
