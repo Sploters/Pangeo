@@ -48,6 +48,8 @@ export const useVaultStore = create<VaultStore>()(
 );
 
 // ─── ProfileStore ─────────────────────────────────────────────────────────────
+export type StudyIntensity = 'light' | 'moderate' | 'deep' | 'all';
+
 type ProfileStore = {
   name: string;
   level: string;
@@ -58,11 +60,13 @@ type ProfileStore = {
   onboarded: boolean;
   avgLatencyMs: number;   // rolling average response latency across all SRS reviews
   latencySamples: number; // total samples recorded (for rolling average)
+  studyIntensity: StudyIntensity;
   setName: (n: string) => void;
   setLevel: (l: string) => void;
   setOnboarded: () => void;
   trackStudySession: (cards: number) => void;
   recordLatency: (ms: number) => void;
+  setStudyIntensity: (i: StudyIntensity) => void;
 };
 
 export const useProfileStore = create<ProfileStore>()(
@@ -77,9 +81,11 @@ export const useProfileStore = create<ProfileStore>()(
       onboarded: false,
       avgLatencyMs: 0,
       latencySamples: 0,
+      studyIntensity: 'moderate' as StudyIntensity,
       setName: (name) => set({ name }),
       setLevel: (level) => set({ level }),
       setOnboarded: () => set({ onboarded: true }),
+      setStudyIntensity: (studyIntensity) => set({ studyIntensity }),
       recordLatency: (ms) =>
         set((s) => {
           const samples = s.latencySamples + 1;

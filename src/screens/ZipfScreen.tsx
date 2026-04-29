@@ -107,28 +107,37 @@ export default function ZipfScreen() {
             { band: band1, cov: cov1, total: 100,  label: '🏆 Top 1–100',    sub: 'Essenciais' },
             { band: band2, cov: cov2, total: 200,  label: '⚡ Top 101–300',  sub: 'Frequentes' },
             { band: band3, cov: cov3, total: 200,  label: '📈 Top 301–500',  sub: 'Avançadas' },
+
           ].map(({ band, cov, total: tot, label, sub }) => {
-            const remaining = band.filter((z) => !inVault(z.word)).length;
+            const noData = band.length === 0;
+            const remaining = noData ? 0 : band.filter((z) => !inVault(z.word)).length;
+            const pctBand = noData ? 0 : (cov / tot) * 100;
+            const btnDisabled = noData || remaining === 0;
+            const btnBg = noData ? Colors.line : remaining === 0 ? Colors.mossSoft : Colors.moss;
+            const btnColor = noData ? Colors.inkMute : remaining === 0 ? Colors.moss : Colors.sand;
+            const btnLabel = noData ? '— Em breve' : remaining === 0 ? '✓ Completo' : `Treinar → ${remaining}`;
             return (
               <View key={label} style={{ backgroundColor: Colors.paper, borderRadius: Radius.md, borderWidth: 0.5, borderColor: Colors.line, padding: 14 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                   <View>
                     <Text style={{ fontSize: 13, fontWeight: '700', color: Colors.ink }}>{label}</Text>
-                    <Text style={{ fontSize: 11, color: Colors.inkMute, marginTop: 1 }}>{sub} · {cov} / {tot} capturadas</Text>
+                    <Text style={{ fontSize: 11, color: Colors.inkMute, marginTop: 1 }}>
+                      {sub} · {noData ? '— / ' + tot : `${cov} / ${tot}`} capturadas
+                    </Text>
                   </View>
                   <TouchableOpacity
                     onPress={() => openBandTriagem(band, `${label} · ${remaining} para capturar`)}
-                    disabled={remaining === 0}
-                    style={{ backgroundColor: remaining === 0 ? Colors.mossSoft : Colors.moss, borderRadius: Radius.full, paddingHorizontal: 14, paddingVertical: 7 }}
+                    disabled={btnDisabled}
+                    style={{ backgroundColor: btnBg, borderRadius: Radius.full, paddingHorizontal: 14, paddingVertical: 7 }}
                     activeOpacity={0.85}
                   >
-                    <Text style={{ fontSize: 12, fontWeight: '700', color: remaining === 0 ? Colors.moss : Colors.sand }}>
-                      {remaining === 0 ? '✓ Completo' : `Treinar → ${remaining}`}
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: btnColor }}>
+                      {btnLabel}
                     </Text>
                   </TouchableOpacity>
                 </View>
                 <View style={{ height: 4, backgroundColor: Colors.line, borderRadius: 2 }}>
-                  <View style={{ height: 4, backgroundColor: Colors.moss, borderRadius: 2, width: `${(cov / tot) * 100}%` as any }} />
+                  <View style={{ height: 4, backgroundColor: noData ? Colors.line : Colors.moss, borderRadius: 2, width: `${pctBand}%` as any }} />
                 </View>
               </View>
             );

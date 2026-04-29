@@ -1,12 +1,12 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, Animated,
+  View, Text, TouchableOpacity, StyleSheet, Animated, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Colors, Radius, Spacing } from '../theme';
 import { PgButton, PgChip, Icons } from '../components';
-import { useVaultStore, useProfileStore } from '../store';
+import { useVaultStore, useProfileStore, StudyIntensity } from '../store';
 import { initFSRS, reviewFSRS, previewIntervals } from '../utils/fsrs';
 
 function latencyLabel(ms: number): { text: string; color: string } {
@@ -15,13 +15,28 @@ function latencyLabel(ms: number): { text: string; color: string } {
   return { text: 'LENTO', color: Colors.coral };
 }
 
+function fmtTime(seconds: number): string {
+  if (seconds < 60) return `~${Math.round(seconds)}s`;
+  return `~${Math.round(seconds / 60)} min`;
+}
+
 const GRADE_MAP = { again: 1, hard: 2, good: 3, easy: 4 } as const;
+
+const INTENSITY_OPTIONS: { key: StudyIntensity; lbl: string; sub: string; icon: string; limit: number }[] = [
+  { key: 'light',    lbl: 'Leve',     sub: '10 cards',   icon: '🌿', limit: 10 },
+  { key: 'moderate', lbl: 'Moderado', sub: '20 cards',   icon: '⚖️', limit: 20 },
+  { key: 'deep',     lbl: 'Intenso',  sub: '40 cards',   icon: '🔥', limit: 40 },
+  { key: 'all',      lbl: 'Tudo',     sub: 'sem limite', icon: '💪', limit: Infinity },
+];
+
 
 export default function SRSScreen() {
   const navigation = useNavigation();
   const { items, updateSRS } = useVaultStore();
-  const { trackStudySession, recordLatency } = useProfileStore();
+  const { trackStudySession, recordLatency, avgLatencyMs, studyIntensity, setStudyIntensity } = useProfileStore();
 
+  const [phase, setPhase] = useState<'pick' | 'session'>('pick');
+  const [selectedIntensity, setSelectedIntensity] = useState<StudyIntensity>(studyIntensity);
   const [flipped, setFlipped] = useState(false);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [sessionCards, setSessionCards] = useState(0);
@@ -30,24 +45,36 @@ export default function SRSScreen() {
   const flipAnim = useRef(new Animated.Value(0)).current;
   const startTimeRef = useRef<number>(Date.now());
 
-  // Deck: items that need review (new or due, and must have a gloss)
+  // Full deck: items due for review that have a gloss
   const deck = useMemo(
     () => items.filter(
       (v) => (v.lastReviewAt === 0 || v.nextReviewAt <= Date.now()) && v.gloss.trim(),
     ),
     [items],
   );
-  const card = deck[currentIdx];
 
-  // Reset timer whenever a new card appears
+  // Session deck: limited by intensity
+  const sessionDeck = useMemo(() => {
+    const opt = INTENSITY_OPTIONS.find((o) => o.key === selectedIntensity);
+    const limit = opt?.limit ?? 20;
+    return limit === Infinity ? deck : deck.slice(0, limit);
+  }, [deck, selectedIntensity]);
+
+  const card = sessionDeck[currentIdx];
+
+  // Estimated seconds per card (recall time + ~5s to rate)
+  const secPerCard = avgLatencyMs > 0 ? avgLatencyMs / 1000 + 5 : 8;
+
+  // Reset timer whenever a new card appears (only in session phase)
   useEffect(() => {
+    if (phase !== 'session') return;
     startTimeRef.current = Date.now();
     setFlipped(false);
     flipAnim.setValue(0);
     setCardLatencyMs(null);
     if (card) setIntervals(previewIntervals(card));
     else setIntervals(null);
-  }, [currentIdx]);
+  }, [currentIdx, phase]);
 
   const flip = () => {
     if (flipped) return;
@@ -59,6 +86,13 @@ export default function SRSScreen() {
     }).start(() => setFlipped(true));
   };
 
+  const startSession = () => {
+    setStudyIntensity(selectedIntensity);
+    setCurrentIdx(0);
+    setSessionCards(0);
+    setPhase('session');
+  };
+
   const next = (difficulty: keyof typeof GRADE_MAP) => {
     if (!card) return;
     const grade = GRADE_MAP[difficulty];
@@ -68,7 +102,7 @@ export default function SRSScreen() {
     setSessionCards((c) => c + 1);
     trackStudySession(1);
 
-    if (currentIdx + 1 < deck.length) {
+    if (currentIdx + 1 < sessionDeck.length) {
       setCurrentIdx((i) => i + 1);
     } else {
       navigation.goBack();
@@ -107,6 +141,65 @@ export default function SRSScreen() {
     );
   }
 
+  // Intensity picker
+  if (phase === 'pick') {
+    return (
+      <SafeAreaView style={styles.safe}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.closeBtn} activeOpacity={0.7}>
+            <Icons.Close size={20} color={Colors.ink} />
+          </TouchableOpacity>
+          <View style={{ flex: 1, alignItems: 'center' }}>
+            <Text style={styles.headerEye}>REVISÃO ESPAÇADA</Text>
+          </View>
+          <View style={styles.closeBtn} />
+        </View>
+
+        <ScrollView contentContainerStyle={{ paddingHorizontal: Spacing.lg, paddingBottom: 32 }}>
+          <Text style={styles.pickerTitle}>Como quer estudar hoje?</Text>
+          <Text style={styles.pickerSub}>
+            {deck.length} card{deck.length !== 1 ? 's' : ''} disponíveis para revisão
+          </Text>
+
+          <View style={{ gap: 10, marginTop: 20 }}>
+            {INTENSITY_OPTIONS.map((opt) => {
+              const count = opt.limit === Infinity ? deck.length : Math.min(opt.limit, deck.length);
+              const estSec = count * secPerCard;
+              const active = selectedIntensity === opt.key;
+              return (
+                <TouchableOpacity
+                  key={opt.key}
+                  onPress={() => setSelectedIntensity(opt.key)}
+                  style={[styles.intensityCard, active && styles.intensityCardActive]}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.intensityIcon}>{opt.icon}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.intensityLbl, active && { color: Colors.sand }]}>{opt.lbl}</Text>
+                    <Text style={[styles.intensitySub, active && { color: Colors.sand, opacity: 0.75 }]}>
+                      {count} card{count !== 1 ? 's' : ''} · {fmtTime(estSec)}
+                    </Text>
+                  </View>
+                  {active && (
+                    <View style={styles.intensityCheck}>
+                      <Text style={{ color: Colors.moss, fontSize: 14, fontWeight: '700' }}>✓</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          <View style={{ marginTop: 24 }}>
+            <PgButton full variant="primary" onPress={startSession}>
+              Começar sessão
+            </PgButton>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safe}>
       {/* Header */}
@@ -117,7 +210,7 @@ export default function SRSScreen() {
         <View style={{ flex: 1, alignItems: 'center' }}>
           <Text style={styles.headerEye}>REVISÃO ESPAÇADA</Text>
           <Text style={styles.headerSub}>
-            <Text style={{ fontWeight: '700' }}>{currentIdx + 1} / {deck.length}</Text>
+            <Text style={{ fontWeight: '700' }}>{currentIdx + 1} / {sessionDeck.length}</Text>
             {'  ·  '}sessão: {sessionCards} revisados
           </Text>
         </View>
@@ -126,7 +219,7 @@ export default function SRSScreen() {
 
       {/* Progress */}
       <View style={styles.progressRow}>
-        {deck.map((_, i) => (
+        {sessionDeck.map((_, i) => (
           <View key={i} style={[
             styles.progressDot,
             { backgroundColor: i < currentIdx ? Colors.moss : i === currentIdx ? Colors.coral : Colors.line }
@@ -280,4 +373,23 @@ const styles = StyleSheet.create({
   diffBtn: { flex: 1, borderRadius: 12, paddingVertical: 12, alignItems: 'center' },
   diffLbl: { fontSize: 13, fontWeight: '700' },
   diffSub: { fontSize: 11, fontWeight: '600', opacity: 0.7, fontFamily: 'monospace', marginTop: 2 },
+  pickerTitle: { fontSize: 22, fontWeight: '700', color: Colors.ink, letterSpacing: -0.4, marginTop: 8 },
+  pickerSub: { fontSize: 13, color: Colors.inkMute, marginTop: 4 },
+  intensityCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 14,
+    backgroundColor: Colors.paper, borderRadius: Radius.md,
+    borderWidth: 0.5, borderColor: Colors.line,
+    padding: 16,
+  },
+  intensityCardActive: {
+    backgroundColor: Colors.moss, borderColor: Colors.moss,
+  },
+  intensityIcon: { fontSize: 28 },
+  intensityLbl: { fontSize: 15, fontWeight: '700', color: Colors.ink },
+  intensitySub: { fontSize: 12, color: Colors.inkMute, marginTop: 2 },
+  intensityCheck: {
+    width: 28, height: 28, borderRadius: 14,
+    backgroundColor: Colors.sand,
+    alignItems: 'center', justifyContent: 'center',
+  },
 });
