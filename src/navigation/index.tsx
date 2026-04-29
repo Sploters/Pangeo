@@ -24,6 +24,7 @@ import TriagemScreen       from '../screens/TriagemScreen';
 import NewsListScreen      from '../screens/NewsListScreen';
 import NewsArticleScreen   from '../screens/NewsArticleScreen';
 import ContentDetailScreen from '../screens/ContentDetailScreen';
+import GrammarScreen       from '../screens/GrammarScreen';
 
 export type RootStackParamList = {
   Main: undefined;
@@ -40,10 +41,12 @@ export type RootStackParamList = {
   ContentDetail: { contentId: string };
   Vault: undefined;
   Discover: undefined;
+  Grammar: undefined;
 };
 
 export type TabParamList = {
   Home: undefined;
+  Grammar: undefined;
   Vault: undefined;
   Discover: undefined;
 };
@@ -54,7 +57,7 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 function TabBar({ state, navigation: nav }: any) {
   const tabs = [
     { key: 'Home', label: 'Home', Icon: Icons.Home },
-    { key: 'SRS', label: 'Revisão', Icon: Icons.Stack, isStack: true },
+    { key: 'Grammar', label: 'Grammar', Icon: Icons.Book },
     { key: 'Capture', label: 'Capturar', Icon: Icons.Plus, isCenter: true },
     { key: 'Vault', label: 'Vault', Icon: Icons.Vault },
     { key: 'Discover', label: 'Descobrir', Icon: Icons.Compass },
@@ -70,7 +73,7 @@ function TabBar({ state, navigation: nav }: any) {
       alignItems: 'center',
     }}>
       {tabs.map((tab, index) => {
-        const tabIdx = ['Home', 'Vault', 'Discover'].indexOf(tab.key);
+        const tabIdx = ['Home', 'Grammar', 'Vault', 'Discover'].indexOf(tab.key);
         const focused = tabIdx >= 0 && state.index === tabIdx;
         const color = focused ? Colors.moss : Colors.inkMute;
         if (tab.isCenter) {
@@ -100,21 +103,6 @@ function TabBar({ state, navigation: nav }: any) {
             </TouchableOpacity>
           );
         }
-        if (tab.isStack) {
-          return (
-            <TouchableOpacity
-              key={tab.key}
-              onPress={() => nav.navigate('SRS')}
-              style={{ flex: 1, alignItems: 'center', gap: 4 }}
-              activeOpacity={0.7}
-            >
-              <tab.Icon size={22} color={Colors.inkMute} />
-              <Text style={{ fontSize: 10, fontWeight: '600', color: Colors.inkMute }}>
-                {tab.label}
-              </Text>
-            </TouchableOpacity>
-          );
-        }
         return (
           <TouchableOpacity
             key={tab.key}
@@ -137,6 +125,7 @@ function MainTabs() {
   return (
     <Tab.Navigator tabBar={(props) => <TabBar {...props} />} screenOptions={{ headerShown: false }}>
       <Tab.Screen name="Home" component={HomeScreen} />
+      <Tab.Screen name="Grammar" component={GrammarScreen} />
       <Tab.Screen name="Vault" component={VaultScreen} />
       <Tab.Screen name="Discover" component={ContentScreen} />
     </Tab.Navigator>

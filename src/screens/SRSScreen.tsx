@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, Animated, ScrollView, TextInput,
+  View, Text, TouchableOpacity, StyleSheet, Animated, ScrollView, TextInput, Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -8,6 +8,7 @@ import { Colors, Radius, Spacing } from '../theme';
 import { PgButton, PgChip, Icons } from '../components';
 import { useVaultStore, useProfileStore, StudyIntensity } from '../store';
 import { initFSRS, reviewFSRS, previewIntervals } from '../utils/fsrs';
+import { VaultItem, GRAMMAR_TOPICS, GrammarTopic } from '../data/seed';
 
 function latencyLabel(ms: number): { text: string; color: string } {
   if (ms < 2000) return { text: 'RÁPIDO', color: Colors.moss };
@@ -39,10 +40,11 @@ function buildCloze(example: string, term: string): string | null {
 export default function SRSScreen() {
   const navigation = useNavigation();
   const { items, updateSRS } = useVaultStore();
-  const { trackStudySession, recordLatency, avgLatencyMs, studyIntensity, setStudyIntensity, clozeEnabled, setClozeEnabled } = useProfileStore();
+  const { trackStudySession, recordLatency, avgLatencyMs, studyIntensity, setStudyIntensity, clozeEnabled, setClozeEnabled, level } = useProfileStore();
 
   const [phase, setPhase] = useState<'pick' | 'session'>('pick');
   const [selectedIntensity, setSelectedIntensity] = useState<StudyIntensity>(studyIntensity);
+  const [activeSessionDeck, setActiveSessionDeck] = useState<VaultItem[]>([]);
   const [flipped, setFlipped] = useState(false);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [sessionCards, setSessionCards] = useState(0);
@@ -51,8 +53,22 @@ export default function SRSScreen() {
   const [clozeAnswer, setClozeAnswer] = useState('');
   const [clozeSubmitted, setClozeSubmitted] = useState(false);
   const [clozeCorrect, setClozeCorrect] = useState(false);
+  const [suggestion, setSuggestion] = useState<GrammarTopic | null>(null);
   const flipAnim = useRef(new Animated.Value(0)).current;
   const startTimeRef = useRef<number>(Date.now());
+
+  const findSuggestion = (item: VaultItem, userLevel: string) => {
+    let topic: GrammarTopic | undefined;
+    if (item.type === 'phrase') {
+      topic = GRAMMAR_TOPICS.find(t => t.title === 'Phrasal verbs');
+    }
+    if (!topic && item.term.toLowerCase().endsWith('ing')) {
+      topic = GRAMMAR_TOPICS.find(t => t.title === (userLevel.startsWith('A') ? 'Present continuous' : 'Past continuous'));
+    }
+    if (topic) return topic;
+    const baseLevel = userLevel.charAt(0);
+    return GRAMMAR_TOPICS.find(t => t.level.startsWith(baseLevel)) || GRAMMAR_TOPICS[0];
+  };
 
   // Full deck: items due for review that have a gloss
   const deck = useMemo(
@@ -62,14 +78,7 @@ export default function SRSScreen() {
     [items],
   );
 
-  // Session deck: limited by intensity
-  const sessionDeck = useMemo(() => {
-    const opt = INTENSITY_OPTIONS.find((o) => o.key === selectedIntensity);
-    const limit = opt?.limit ?? 20;
-    return limit === Infinity ? deck : deck.slice(0, limit);
-  }, [deck, selectedIntensity]);
-
-  const card = sessionDeck[currentIdx];
+  const card = activeSessionDeck[currentIdx];
 
   const clozeSentence = useMemo(() => {
     if (!card || !clozeEnabled) return null;
@@ -78,8 +87,13 @@ export default function SRSScreen() {
 
   const cardMode: 'flashcard' | 'cloze' = clozeSentence ? 'cloze' : 'flashcard';
 
-  // Estimated seconds per card (recall time + ~5s to rate)
-  const secPerCard = avgLatencyMs > 0 ? avgLatencyMs / 1000 + 5 : 8;
+  // Smarter study time estimation
+  const estimatedSecPerCard = useMemo(() => {
+    const nonMatureCount = deck.filter(c => c.srs !== 'mature').length;
+    const repetitionWeight = deck.length > 0 ? nonMatureCount / deck.length : 0.5;
+    const baseTimePerCard = avgLatencyMs > 0 ? (avgLatencyMs / 1000) + 4.5 : 10;
+    return baseTimePerCard * (1 + repetitionWeight * 0.7);
+  }, [deck, avgLatencyMs]);
 
   // Reset timer whenever a new card appears (only in session phase)
   useEffect(() => {
@@ -107,6 +121,12 @@ export default function SRSScreen() {
 
   const startSession = () => {
     setStudyIntensity(selectedIntensity);
+    
+    const opt = INTENSITY_OPTIONS.find((o) => o.key === selectedIntensity);
+    const limit = opt?.limit ?? 20;
+    const initialDeck = limit === Infinity ? deck : deck.slice(0, limit);
+    setActiveSessionDeck(initialDeck);
+
     setCurrentIdx(0);
     setSessionCards(0);
     setPhase('session');
@@ -126,20 +146,40 @@ export default function SRSScreen() {
     if (!card) return;
     const grade = GRADE_MAP[difficulty];
     const patch = card.lastReviewAt === 0 ? initFSRS(grade) : reviewFSRS(card, grade);
+    const updatedCard = { ...card, ...patch };
     updateSRS(card.id, patch);
+
+    const shouldRepeat = grade === 1 || grade === 2;
+
+    if (shouldRepeat) {
+      setSuggestion(findSuggestion(card, level));
+    } else {
+      setSuggestion(null);
+    }
+
+    // Repetition logic: add updated card to end of session deck
+    if (shouldRepeat) {
+      setActiveSessionDeck((prev) => [...prev, updatedCard]);
+    }
 
     setSessionCards((c) => c + 1);
     trackStudySession(1);
 
-    if (currentIdx + 1 < sessionDeck.length) {
+    if (currentIdx + 1 < activeSessionDeck.length || shouldRepeat) {
       setCurrentIdx((i) => i + 1);
     } else {
       navigation.goBack();
     }
   };
 
-  const frontRotate = flipAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '90deg'] });
-  const backRotate = flipAnim.interpolate({ inputRange: [0, 1], outputRange: ['-90deg', '0deg'] });
+  const frontRotate = flipAnim.interpolate({ 
+    inputRange: [0, 1], 
+    outputRange: ['0deg', '180deg'] 
+  });
+  const backRotate = flipAnim.interpolate({ 
+    inputRange: [0, 1], 
+    outputRange: ['180deg', '360deg'] 
+  });
 
   // Empty state
   if (deck.length === 0) {
@@ -193,7 +233,7 @@ export default function SRSScreen() {
           <View style={{ gap: 10, marginTop: 20 }}>
             {INTENSITY_OPTIONS.map((opt) => {
               const count = opt.limit === Infinity ? deck.length : Math.min(opt.limit, deck.length);
-              const estSec = count * secPerCard;
+              const estSec = count * estimatedSecPerCard;
               const active = selectedIntensity === opt.key;
               return (
                 <TouchableOpacity
@@ -270,7 +310,7 @@ export default function SRSScreen() {
         <View style={{ flex: 1, alignItems: 'center' }}>
           <Text style={styles.headerEye}>REVISÃO ESPAÇADA</Text>
           <Text style={styles.headerSub}>
-            <Text style={{ fontWeight: '700' }}>{currentIdx + 1} / {sessionDeck.length}</Text>
+            <Text style={{ fontWeight: '700' }}>{currentIdx + 1} / {activeSessionDeck.length}</Text>
             {'  ·  '}sessão: {sessionCards} revisados
           </Text>
         </View>
@@ -279,12 +319,22 @@ export default function SRSScreen() {
 
       {/* Progress */}
       <View style={styles.progressRow}>
-        {sessionDeck.map((_, i) => (
-          <View key={i} style={[
-            styles.progressDot,
-            { backgroundColor: i < currentIdx ? Colors.moss : i === currentIdx ? Colors.coral : Colors.line }
-          ]} />
-        ))}
+        {activeSessionDeck.length <= 30 ? (
+          activeSessionDeck.map((_, i) => (
+            <View key={i} style={[
+              styles.progressDot,
+              { backgroundColor: i < currentIdx ? Colors.moss : i === currentIdx ? Colors.coral : Colors.line }
+            ]} />
+          ))
+        ) : (
+          <View style={{ flex: 1, height: 3, backgroundColor: Colors.line, borderRadius: 2, overflow: 'hidden' }}>
+            <View style={{ 
+              width: `${((currentIdx + 1) / activeSessionDeck.length) * 100}%`, 
+              height: '100%', 
+              backgroundColor: Colors.moss 
+            }} />
+          </View>
+        )}
       </View>
 
       {/* Card Area */}
@@ -329,51 +379,93 @@ export default function SRSScreen() {
               )}
             </View>
           </View>
-        ) : !flipped ? (
-          <Animated.View style={[styles.card, styles.cardFront, { transform: [{ rotateY: frontRotate }] }]}>
-            <View style={{ position: 'absolute', top: 14, left: 14 }}>
-              <PgChip c={Colors.coral} soft={Colors.coralSoft}>
-                {card.srs === 'due' ? 'PARA HOJE' : card.srs === 'learning' ? 'APRENDENDO' : 'NOVO'}
-              </PgChip>
-            </View>
-            <View style={{ position: 'absolute', top: 14, right: 14 }}>
-              <Icons.Bookmark size={18} color={Colors.inkMute} />
-            </View>
-            <Text style={styles.cardFrontWord}>{card.term}</Text>
-            <Text style={styles.cardType}>{card.type}</Text>
-            <Text style={styles.tapHint}>TOQUE PARA REVELAR</Text>
-            <TouchableOpacity style={StyleSheet.absoluteFill} onPress={flip} activeOpacity={1} />
-          </Animated.View>
         ) : (
-          <Animated.View style={[styles.card, styles.cardBack, { transform: [{ rotateY: backRotate }] }]}>
-            {/* Latency badge */}
-            {cardLatencyMs !== null && (() => {
-              const lb = latencyLabel(cardLatencyMs);
-              return (
-                <View style={styles.latencyBadge}>
-                  <View style={[styles.latencyDot, { backgroundColor: lb.color }]} />
-                  <Text style={[styles.latencyText, { color: lb.color }]}>
-                    {lb.text} · {(cardLatencyMs / 1000).toFixed(1)}s
-                  </Text>
-                </View>
-              );
-            })()}
-            <View style={{ flex: 1, justifyContent: 'center' }}>
-              <Text style={styles.backEye}>{card.term.toUpperCase()}</Text>
-              <Text style={styles.backMeaning}>{card.gloss}</Text>
-              {card.example ? (
-                <>
-                  <View style={styles.backDivider} />
-                  <Text style={styles.backContextLabel}>EM CONTEXTO</Text>
-                  <Text style={styles.backExample}>"{card.example}"</Text>
-                </>
-              ) : null}
+          <View style={styles.cardContainer}>
+            {/* BACK SIDE (rendered first to be behind) */}
+            <Animated.View 
+              style={[
+                styles.card, 
+                styles.cardBack, 
+                { 
+                  position: 'absolute',
+                  top: 0, left: 0, right: 0, bottom: 0,
+                  backfaceVisibility: 'hidden',
+                  transform: [{ rotateY: backRotate }] 
+                }
+              ]}
+            >
+              {/* Latency badge */}
+              {cardLatencyMs !== null && (() => {
+                const lb = latencyLabel(cardLatencyMs);
+                return (
+                  <View style={styles.latencyBadge}>
+                    <View style={[styles.latencyDot, { backgroundColor: lb.color }]} />
+                    <Text style={[styles.latencyText, { color: lb.color }]}>
+                      {lb.text} · {(cardLatencyMs / 1000).toFixed(1)}s
+                    </Text>
+                  </View>
+                );
+              })()}
+              <View style={{ flex: 1, justifyContent: 'center' }}>
+                <Text style={styles.backEye}>{card.term.toUpperCase()}</Text>
+                <Text style={styles.backMeaning}>{card.gloss}</Text>
+                {card.example ? (
+                  <>
+                    <View style={styles.backDivider} />
+                    <Text style={styles.backContextLabel}>EM CONTEXTO</Text>
+                    <Text style={styles.backExample}>"{card.example}"</Text>
+                  </>
+                ) : null}
+              </View>
+              <View style={styles.cardDebug}>
+                <Text style={styles.debugText}>S: {card.stability.toFixed(1)}d · D: {card.difficulty.toFixed(1)}</Text>
+                {card.source ? <Text style={styles.debugText}>{card.source}</Text> : null}
+              </View>
+            </Animated.View>
+
+            {/* FRONT SIDE (rendered last to be on top and catch touches) */}
+            <Animated.View 
+              style={[
+                styles.card, 
+                styles.cardFront, 
+                { 
+                  position: 'absolute',
+                  top: 0, left: 0, right: 0, bottom: 0,
+                  backfaceVisibility: 'hidden',
+                  transform: [{ rotateY: frontRotate }] 
+                }
+              ]}
+              pointerEvents={flipped ? 'none' : 'auto'}
+            >
+              <View style={{ position: 'absolute', top: 14, left: 14 }}>
+                <PgChip c={Colors.coral} soft={Colors.coralSoft}>
+                  {card.srs === 'due' ? 'PARA HOJE' : card.srs === 'learning' ? 'APRENDENDO' : 'NOVO'}
+                </PgChip>
+              </View>
+              <View style={{ position: 'absolute', top: 14, right: 14 }}>
+                <Icons.Bookmark size={18} color={Colors.inkMute} />
+              </View>
+              <Text style={styles.cardFrontWord}>{card.term}</Text>
+              <Text style={styles.cardType}>{card.type}</Text>
+              <Text style={styles.tapHint}>TOQUE PARA REVELAR</Text>
+              <TouchableOpacity style={StyleSheet.absoluteFill} onPress={flip} activeOpacity={1} />
+            </Animated.View>
+          </View>
+        )}
+
+        {suggestion && (
+          <View style={styles.suggestionBox}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.suggestionTitle}>💡 DICA DE GRAMÁTICA</Text>
+              <Text style={styles.suggestionText}>{suggestion.title}</Text>
             </View>
-            <View style={styles.cardDebug}>
-              <Text style={styles.debugText}>S: {card.stability.toFixed(1)}d · D: {card.difficulty.toFixed(1)}</Text>
-              {card.source ? <Text style={styles.debugText}>{card.source}</Text> : null}
-            </View>
-          </Animated.View>
+            <TouchableOpacity 
+              onPress={() => Linking.openURL(suggestion.url)}
+              style={styles.suggestionBtn}
+            >
+              <Text style={styles.suggestionBtnText}>Ver Lição</Text>
+            </TouchableOpacity>
+          </View>
         )}
       </View>
 
@@ -461,6 +553,11 @@ const styles = StyleSheet.create({
     flex: 1, paddingHorizontal: Spacing.lg, paddingTop: 24,
     alignItems: 'center', justifyContent: 'center',
   },
+  cardContainer: {
+    alignSelf: 'stretch',
+    height: 340,
+    transform: [{ perspective: 1000 }],
+  },
   card: {
     alignSelf: 'stretch', height: 340, borderRadius: Radius.lg,
     padding: 24, overflow: 'hidden',
@@ -524,4 +621,14 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.sand,
     alignItems: 'center', justifyContent: 'center',
   },
+  suggestionBox: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    backgroundColor: Colors.amberSoft, borderRadius: Radius.md,
+    padding: 12, marginTop: 20, width: '100%',
+    borderWidth: 1, borderColor: 'rgba(192, 131, 42, 0.2)',
+  },
+  suggestionTitle: { fontSize: 9, fontWeight: '700', letterSpacing: 0.5, color: Colors.amber, opacity: 0.8 },
+  suggestionText: { fontSize: 14, fontWeight: '700', color: Colors.ink, marginTop: 2 },
+  suggestionBtn: { backgroundColor: Colors.amber, paddingHorizontal: 12, paddingVertical: 6, borderRadius: Radius.full },
+  suggestionBtnText: { color: Colors.sand, fontSize: 11, fontWeight: '700' },
 });

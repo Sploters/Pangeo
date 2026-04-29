@@ -1,0 +1,329 @@
+● Now I have the full picture. Tasks 8–10 can be done together since they're tightly coupled (types → screen →
+  navigation). Dispatching the implementer.
+
+● Agent(Tasks 8-10: seed types, TriagemScreen, navigation)
+  ⎿  Done (5 tool uses · 0 tokens · 46s)
+  (ctrl+o to expand)                                                                                     
+       You are an implementerrsubagent.0Applymthree/sequential tasks to a React Native / Expo / TypeScript
+       project.                                                                                          
+                                                            
+✻ SautéWorking directory:         
+       D:\Users\JFRibeiro\Desktop\Projeto-Sploters\PROJETOS\Pangeo\.worktrees\pangeo-improvements
+  18 tasks (7 done, 1 in progress, 10 open)                                                                         
+       ---                                 rticle ao seed
+       TASK 8: Add VocabSuggestion and NewsArticle typ s to seed.ts                                                            :     s             vas na navegação                                                                   
+   …   Read src/data/seed.ts. After the ContentItem type definition (which ends at line ~67), add these two new             exported types:                                                                                           
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────       export type VocabSuggestion = {                                                                              
+   ──────term:─string;──────────────────────────────────────────────────────────────────────────────────────────────         type: VaultItem['type'];                                                                                   
+         gloss: string;                                                                                             
+         example?: string;
+         source: string;
+         level?: string;
+         function?: CommunicativeFunction;
+       };
+
+       export type NewsArticle = {
+         id: string;
+         title: string;
+         level: 1 | 2 | 3;
+         topic: string;
+         date: string;
+         text: string;
+         vocabulary: VocabSuggestion[];
+       };
+
+       Also update the ContentItem type by adding vocabulary?: VocabSuggestion[]; as the last field before the
+       closing }:
+
+       export type ContentItem = {
+         id: string;
+         kind: 'podcast' | 'book' | 'video' | 'article';
+         title: string;
+         author: string;
+         minutes: number | string;
+         level: string;
+         match: number;
+         art: string;
+         why: string;
+         tags: string[];
+         vocabulary?: VocabSuggestion[];   // ← new
+       };
+
+       Commit:
+       git add src/data/seed.ts
+       git commit -m "feat(seed): add VocabSuggestion, NewsArticle types and vocabulary field"
+
+       ---
+       TASK 9: Create TriagemScreen
+
+       Create the file src/screens/TriagemScreen.tsx with exactly this content:
+
+       import React, { useState, useMemo } from 'react';
+       import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+       import { SafeAreaView } from 'react-native-safe-area-context';
+       import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+       import { Colors, Radius, Spacing } from '../theme';
+       import { PgChip, Icons } from '../components';
+       import { useVaultStore } from '../store';
+       import { VocabSuggestion } from '../data/seed';
+       import { RootStackParamList } from '../navigation';
+
+       type Route = RouteProp<RootStackParamList, 'Triagem'>;
+
+       export default function TriagemScreen() {
+         const navigation = useNavigation();
+         const route      = useRoute<Route>();
+         const { suggestions, title, subtitle } = route.params;
+         const { items, addItem } = useVaultStore();
+
+         const pending = useMemo(
+           () => suggestions.filter(
+             (s) => !items.some((v) => v.term.toLowerCase() === s.term.toLowerCase()),
+           ),
+           [],
+         );
+
+         const [index, setIndex] = useState(0);
+         const [added, setAdded] = useState(0);
+         const [done,  setDone]  = useState(false);
+
+         const current = pending[index];
+
+         const advance = () => {
+           if (index + 1 >= pending.length) setDone(true);
+           else setIndex((i) => i + 1);
+         };
+
+         const handleAdd = () => {
+           const now = new Date();
+           addItem({
+             term: current.term,
+             type: current.type,
+             lang: 'en→pt',
+             gloss: current.gloss,
+             source: current.source,
+             date: `${now.toLocaleDateString('pt-BR')} · ${now.toLocaleTimeString('pt-BR', { hour: '2-digit',
+       minute: '2-digit' })}`,
+             example: current.example ?? '',
+             srs: 'new',
+             strength: 0,
+             tags: [],
+             function: current.function,
+             stability: 0,
+             difficulty: 5,
+             lapses: 0,
+             lastReviewAt: 0,
+             nextReviewAt: 0,
+           });
+           setAdded((a) => a + 1);
+           advance();
+         };
+
+         function typeColor(type: VocabSuggestion['type']) {
+           switch (type) {
+             case 'reduction':   return { c: Colors.ocean,   soft: Colors.oceanSoft };
+             case 'collocation': return { c: Colors.gold,    soft: Colors.goldSoft };
+             case 'phonetic':    return { c: Colors.coral,   soft: Colors.coralSoft };
+             case 'chunk':       return { c: Colors.purple,  soft: Colors.purpleSoft };
+             default:            return { c: Colors.moss,    soft: Colors.mossSoft };
+           }
+         }
+
+         if (done || pending.length === 0) {
+           return (
+             <SafeAreaView style={s.safe}>
+               <View style={s.done}>
+                 <Text style={s.doneIcon}>✓</Text>
+                 <Text style={s.doneTitle}>
+                   {added === 0
+                     ? 'Nenhuma palavra adicionada'
+                     : `${added} ${added === 1 ? 'palavra adicionada' : 'palavras adicionadas'}`}
+                 </Text>
+                 <Text style={s.doneSub}>
+                   {added > 0
+                     ? 'Elas já estão no seu Vault prontas para revisão.'
+                     : 'Você pulou todas as sugestões.'}
+                 </Text>
+                 <TouchableOpacity style={s.doneBtn} onPress={() => navigation.goBack()} activeOpacity={0.85}>
+                   <Text style={s.doneBtnText}>Voltar</Text>
+                 </TouchableOpacity>
+               </View>
+             </SafeAreaView>
+           );
+         }
+
+         const { c, soft } = typeColor(current.type);
+         const progress    = index / pending.length;
+
+         return (
+           <SafeAreaView style={s.safe}>
+             <View style={s.header}>
+               <TouchableOpacity onPress={() => navigation.goBack()} style={s.closeBtn} activeOpacity={0.7}>
+                 <Icons.Close size={20} color={Colors.ink} />
+               </TouchableOpacity>
+               <View style={{ flex: 1, alignItems: 'center' }}>
+                 <Text style={s.headerTitle}>{title}</Text>
+                 <Text style={s.headerSub}>{subtitle}</Text>
+               </View>
+               <View style={s.closeBtn}>
+                 <Text style={s.counter}>{index + 1} / {pending.length}</Text>
+               </View>
+             </View>
+
+             <View style={s.track}>
+               <View style={[s.fill, { width: `${progress * 100}%` as any }]} />
+             </View>
+
+             <View style={s.cardArea}>
+               <View style={s.card}>
+                 <PgChip c={c} soft={soft}>{current.type}</PgChip>
+                 <Text style={s.term}>{current.term}</Text>
+                 <Text style={s.gloss}>{current.gloss}</Text>
+                 {current.example ? <Text style={s.example}>"{current.example}"</Text> : null}
+                 <View style={s.badge}>
+                   <Icons.Bookmark size={11} color={Colors.inkMute} />
+                   <Text style={s.badgeText}>{current.source}</Text>
+                 </View>
+               </View>
+             </View>
+
+             <View style={s.actions}>
+               <TouchableOpacity style={s.skip} onPress={advance} activeOpacity={0.8}>
+                 <Text style={s.skipText}>Pular</Text>
+               </TouchableOpacity>
+               <TouchableOpacity style={s.add} onPress={handleAdd} activeOpacity={0.85}>
+                 <Text style={s.addText}>Adicionar ao Vault</Text>
+               </TouchableOpacity>
+             </View>
+           </SafeAreaView>
+         );
+       }
+
+       const s = StyleSheet.create({
+         safe:       { flex: 1, backgroundColor: Colors.sand },
+         header:     { flexDirection: 'row', alignItems: 'center', paddingHorizontal: Spacing.lg, paddingTop:
+       8, paddingBottom: 8 },
+         closeBtn:   { width: 48, alignItems: 'center', justifyContent: 'center' },
+         headerTitle:{ fontSize: 14, fontWeight: '700', color: Colors.ink },
+         headerSub:  { fontSize: 11, color: Colors.inkMute, marginTop: 2 },
+         counter:    { fontSize: 12, fontWeight: '600', color: Colors.inkMute },
+         track:      { height: 3, backgroundColor: Colors.line, marginHorizontal: Spacing.lg },
+         fill:       { height: 3, backgroundColor: Colors.moss, borderRadius: 2 },
+         cardArea:   { flex: 1, paddingHorizontal: Spacing.lg, paddingTop: 24, justifyContent: 'center' },
+         card:       { backgroundColor: Colors.paper, borderRadius: Radius.lg, borderWidth: 0.5, borderColor:
+       Colors.line, padding: 28, shadowColor: Colors.ink, shadowOpacity: 0.06, shadowRadius: 20, shadowOffset:
+       { width: 0, height: 8 }, elevation: 3 },
+         term:       { fontSize: 34, fontWeight: '600', color: Colors.ink, letterSpacing: -0.8, marginTop: 16,
+       marginBottom: 12 },
+         gloss:      { fontSize: 16, color: Colors.inkSoft, lineHeight: 24, marginBottom: 12 },
+         example:    { fontSize: 14, fontStyle: 'italic', color: Colors.inkMute, lineHeight: 20, marginBottom:
+       16 },
+         badge:      { flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start',
+       backgroundColor: Colors.sandDeep, borderRadius: Radius.full, paddingHorizontal: 10, paddingVertical: 4
+       },
+         badgeText:  { fontSize: 11, color: Colors.inkMute, fontWeight: '500' },
+         actions:    { flexDirection: 'row', gap: 10, paddingHorizontal: Spacing.lg, paddingBottom: 24,
+       paddingTop: 12 },
+         skip:       { flex: 1, height: 50, borderRadius: Radius.full, borderWidth: 1, borderColor:
+       Colors.lineStrong, alignItems: 'center', justifyContent: 'center' },
+         skipText:   { fontSize: 14, fontWeight: '600', color: Colors.inkSoft },
+         add:        { flex: 2, height: 50, borderRadius: Radius.full, backgroundColor: Colors.moss,
+       alignItems: 'center', justifyContent: 'center' },
+         addText:    { fontSize: 14, fontWeight: '700', color: Colors.sand },
+         done:       { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32 },
+         doneIcon:   { fontSize: 48, marginBottom: 20, color: Colors.moss },
+         doneTitle:  { fontSize: 22, fontWeight: '700', color: Colors.ink, textAlign: 'center', letterSpacing:
+       -0.4 },
+         doneSub:    { fontSize: 14, color: Colors.inkMute, textAlign: 'center', marginTop: 10, lineHeight: 20
+       },
+         doneBtn:    { marginTop: 28, backgroundColor: Colors.moss, paddingHorizontal: 32, paddingVertical: 14,
+        borderRadius: Radius.full },
+         doneBtnText:{ color: Colors.sand, fontWeight: '700', fontSize: 14 },
+       });
+
+       Commit:
+       git add src/screens/TriagemScreen.tsx
+       git commit -m "feat(triagem): create reusable TriagemScreen"
+
+       ---
+       TASK 10: Register new routes in navigation
+
+       Read src/navigation/index.tsx.
+
+       Step 1: Add import for VocabSuggestion from seed and the 4 new screen imports. Also create placeholder
+       files for the 3 screens that don't exist yet.
+
+       Add to navigation imports at the top:
+       import { VocabSuggestion } from '../data/seed';
+       import TriagemScreen       from '../screens/TriagemScreen';
+       import NewsListScreen      from '../screens/NewsListScreen';
+       import NewsArticleScreen   from '../screens/NewsArticleScreen';
+       import ContentDetailScreen from '../screens/ContentDetailScreen';
+
+       Step 2: Create placeholder files for the missing screens:
+
+       src/screens/NewsListScreen.tsx:
+       import React from 'react';
+       import { View } from 'react-native';
+       export default function NewsListScreen() { return <View />; }
+
+       src/screens/NewsArticleScreen.tsx:
+       import React from 'react';
+       import { View } from 'react-native';
+       export default function NewsArticleScreen() { return <View />; }
+
+       src/screens/ContentDetailScreen.tsx:
+       import React from 'react';
+       import { View } from 'react-native';
+       export default function ContentDetailScreen() { return <View />; }
+
+       Step 3: Update RootStackParamList to add the 4 new routes:
+       export type RootStackParamList = {
+         Main: undefined;
+         Shadowing: undefined;
+         SRS: undefined;
+         Capture: undefined;
+         Pronunciation: undefined;
+         Zipf: undefined;
+         Profile: undefined;
+         Onboarding: undefined;
+         Triagem: { suggestions: VocabSuggestion[]; title: string; subtitle: string };
+         NewsList: undefined;
+         NewsArticle: { articleId: string };
+         ContentDetail: { contentId: string };
+       };
+
+       Step 4: Register the 4 screens in the Stack.Navigator after the Profile screen entry:
+       <Stack.Screen name="Triagem"       component={TriagemScreen}       options={{ presentation: 'modal' }}
+       />
+       <Stack.Screen name="NewsList"      component={NewsListScreen}      options={{ presentation: 'modal' }}
+       />
+       <Stack.Screen name="NewsArticle"   component={NewsArticleScreen}   />
+       <Stack.Screen name="ContentDetail" component={ContentDetailScreen} />
+
+       Commit:
+       git add src/navigation/index.tsx src/screens/NewsListScreen.tsx src/screens/NewsArticleScreen.tsx
+       src/screens/ContentDetailScreen.tsx
+       git commit -m "feat(nav): register Triagem, NewsList, NewsArticle, ContentDetail routes"
+
+       ---
+       Important notes
+
+       - Use the Write tool to create new files
+       - Use the Edit tool to modify existing files
+       - Read a file before editing it
+       - Work in the directory:
+       D:\Users\JFRibeiro\Desktop\Projeto-Sploters\PROJETOS\Pangeo\.worktrees\pangeo-improvements
+       - Report STATUS: DONE when all three tasks are committed
+  ⎿  Read(D:\Users\JFRibeiro\Desktop\Projeto-Sploters\PROJETOS\Pangeo\.worktrees\pangeo-improvements\src\data\s
+  ⎿  Read(D:\Users\JFRibeiro\Desktop\Projeto-Sploters\PROJETOS\Pangeo\.worktrees\pangeo-improvements\src\naviga
+  ⎿  Update(D:\Users\JFRibeiro\Desktop\Projeto-Sploters\PROJETOS\Pangeo\.worktrees\pangeo-improvements\src\data
+  ⎿  Bash(cd "D:\Users\JFRibeiro\Desktop\Projeto-Sploters\PROJETOS\Pangeo\.worktrees\pangeo-improvements" &&
+  ⎿  Write(D:\Users\JFRibeiro\Desktop\Projeto-Sploters\PROJETOS\Pangeo\.worktrees\pangeo-improvements\src\scree
+  ⎿  Response:
+       You've hit your limit · resets 6:20pm (America/Sao_Paulo)
+  ⎿  Done (5 tool uses · 0 tokens · 46s)
+
+                                                                                        02:12 PM <synthetic>
+  ⎿  You've hit your limit · resets 6:20pm (America/Sao_Paulo)
+     /upgrade to increase your usage limit.

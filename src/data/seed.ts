@@ -118,6 +118,19 @@ export type SchwaWord = {
   schwas: number[];
 };
 
+export type GrammarLevel = 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
+
+export type GrammarTopic = {
+  id: string;
+  level: GrammarLevel;
+  title: string;
+  description: string;
+  url: string;
+  lessonNumber: number;
+  minWords: number;
+  difficultyTags: string[];
+};
+
 export type Reduction = {
   full: string;
   reduced: string;
@@ -561,3 +574,74 @@ export const NEWS_ARTICLES: NewsArticle[] = [
     ],
   },
 ];
+
+export const GRAMMAR_TOPICS: GrammarTopic[] = [
+  // ── LEVEL 1 (A1/A2) ──────────────────────────────────────────────────────────
+  { id: 'g1-1',  level: 'A1', lessonNumber: 1,  minWords: 500, title: 'To be', description: 'Estudo sobre o verbo To be', url: 'https://www.grammarinlevels.com/level1/lesson-1/', difficultyTags: ['basic', 'verbs'] },
+  { id: 'g1-2',  level: 'A1', lessonNumber: 2,  minWords: 500, title: 'Present simple', description: 'Prática de Present Simple', url: 'https://www.grammarinlevels.com/level1/lesson-2/', difficultyTags: ['basic', 'tenses'] },
+  { id: 'g1-3',  level: 'A1', lessonNumber: 3,  minWords: 500, title: 'Can', description: 'Uso do verbo modal Can', url: 'https://www.grammarinlevels.com/level1/lesson-3/', difficultyTags: ['modal', 'ability'] },
+  { id: 'g1-4',  level: 'A1', lessonNumber: 4,  minWords: 500, title: 'Plural', description: 'Regras de plural em inglês', url: 'https://www.grammarinlevels.com/level1/lesson-4/', difficultyTags: ['nouns', 'grammar'] },
+  { id: 'g1-5',  level: 'A1', lessonNumber: 5,  minWords: 500, title: 'A, the', description: 'Artigos definidos e indefinidos', url: 'https://www.grammarinlevels.com/level1/lesson-5/', difficultyTags: ['articles', 'grammar'] },
+  { id: 'g1-6',  level: 'A1', lessonNumber: 6,  minWords: 500, title: 'To go', description: 'Uso do verbo To go', url: 'https://www.grammarinlevels.com/level1/lesson-6/', difficultyTags: ['verbs', 'common'] },
+  { id: 'g1-7',  level: 'A1', lessonNumber: 7,  minWords: 500, title: 'Present continuous', description: 'Estudo do Present Continuous', url: 'https://www.grammarinlevels.com/level1/lesson-7/', difficultyTags: ['tenses', 'ongoing'] },
+  { id: 'g1-8',  level: 'A1', lessonNumber: 8,  minWords: 500, title: 'Me', description: 'Pronomes objeto', url: 'https://www.grammarinlevels.com/level1/lesson-8/', difficultyTags: ['pronouns', 'grammar'] },
+  { id: 'g1-9',  level: 'A1', lessonNumber: 9,  minWords: 500, title: 'Go', description: 'Verbo Go e direções', url: 'https://www.grammarinlevels.com/level1/lesson-9/', difficultyTags: ['verbs', 'directions'] },
+  { id: 'g1-10', level: 'A1', lessonNumber: 10, minWords: 500, title: 'Must', description: 'Verbo modal Must', url: 'https://www.grammarinlevels.com/level1/lesson-10/', difficultyTags: ['modal', 'obligation'] },
+  { id: 'g1-11', level: 'A2', lessonNumber: 11, minWords: 500, title: 'Faster', description: 'Comparativos de superioridade', url: 'https://www.grammarinlevels.com/level1/lesson-11/', difficultyTags: ['comparatives', 'adjectives'] },
+  { id: 'g1-12', level: 'A2', lessonNumber: 12, minWords: 500, title: 'There is', description: 'Haver/existir com There is/are', url: 'https://www.grammarinlevels.com/level1/lesson-12/', difficultyTags: ['existence', 'grammar'] },
+  { id: 'g1-13', level: 'A2', lessonNumber: 13, minWords: 500, title: 'Fastest', description: 'Superlativos', url: 'https://www.grammarinlevels.com/level1/lesson-13/', difficultyTags: ['superlatives', 'adjectives'] },
+  { id: 'g1-14', level: 'A2', lessonNumber: 14, minWords: 500, title: 'Negative sentence', description: 'Estrutura de frases negativas', url: 'https://www.grammarinlevels.com/level1/lesson-14/', difficultyTags: ['syntax', 'negative'] },
+  { id: 'g1-15', level: 'A2', lessonNumber: 15, minWords: 500, title: 'Nobody', description: 'Pronomes indefinidos negativos', url: 'https://www.grammarinlevels.com/level1/lesson-15/', difficultyTags: ['pronouns', 'negation'] },
+  { id: 'g1-16', level: 'A2', lessonNumber: 16, minWords: 500, title: 'Question', description: 'Formação de perguntas', url: 'https://www.grammarinlevels.com/level1/lesson-16/', difficultyTags: ['syntax', 'questions'] },
+  { id: 'g1-17', level: 'A2', lessonNumber: 17, minWords: 500, title: 'Many, much', description: 'Quantificadores Many e Much', url: 'https://www.grammarinlevels.com/level1/lesson-17/', difficultyTags: ['quantifiers', 'countable'] },
+  { id: 'g1-18', level: 'A2', lessonNumber: 18, minWords: 500, title: 'Somebody’s', description: "Caso possessivo ('s)", url: 'https://www.grammarinlevels.com/level1/lesson-18/', difficultyTags: ['possessive', 'grammar'] },
+  { id: 'g1-19', level: 'A2', lessonNumber: 19, minWords: 500, title: 'I’m', description: 'Contrações comuns', url: 'https://www.grammarinlevels.com/level1/lesson-19/', difficultyTags: ['contractions', 'pronunciation'] },
+  { id: 'g1-20', level: 'A2', lessonNumber: 20, minWords: 500, title: 'In, on, at', description: 'Preposições de tempo e lugar', url: 'https://www.grammarinlevels.com/level1/lesson-20/', difficultyTags: ['prepositions', 'time', 'place'] },
+  { id: 'g1-21', level: 'A2', lessonNumber: 21, minWords: 500, title: 'In, on, at, for', description: 'Preposições avançadas de tempo', url: 'https://www.grammarinlevels.com/level1/lesson-21/', difficultyTags: ['prepositions', 'time'] },
+
+  // ── LEVEL 2 (B1/B2) ──────────────────────────────────────────────────────────
+  { id: 'g2-1',  level: 'B1', lessonNumber: 1,  minWords: 1000, title: 'I was', description: 'Passado do verbo To be', url: 'https://www.grammarinlevels.com/level2/lesson-1/', difficultyTags: ['past', 'verbs'] },
+  { id: 'g2-2',  level: 'B1', lessonNumber: 2,  minWords: 1000, title: 'Past simple', description: 'Estudo do Past Simple', url: 'https://www.grammarinlevels.com/level2/lesson-2/', difficultyTags: ['past', 'tenses'] },
+  { id: 'g2-3',  level: 'B1', lessonNumber: 3,  minWords: 1000, title: 'Could', description: 'Uso do modal Could', url: 'https://www.grammarinlevels.com/level2/lesson-3/', difficultyTags: ['modal', 'past-ability'] },
+  { id: 'g2-4',  level: 'B1', lessonNumber: 4,  minWords: 1000, title: 'Had to', description: 'Expressando obrigação no passado', url: 'https://www.grammarinlevels.com/level2/lesson-4/', difficultyTags: ['past', 'obligation'] },
+  { id: 'g2-5',  level: 'B1', lessonNumber: 5,  minWords: 1000, title: 'Future simple', description: 'Uso de Will para o futuro', url: 'https://www.grammarinlevels.com/level2/lesson-5/', difficultyTags: ['future', 'tenses'] },
+  { id: 'g2-6',  level: 'B1', lessonNumber: 6,  minWords: 1000, title: 'Past continuous', description: 'Estudo do Past Continuous', url: 'https://www.grammarinlevels.com/level2/lesson-6/', difficultyTags: ['past', 'ongoing'] },
+  { id: 'g2-7',  level: 'B1', lessonNumber: 7,  minWords: 1000, title: 'Some, any', description: 'Quantificadores Some e Any', url: 'https://www.grammarinlevels.com/level2/lesson-7/', difficultyTags: ['quantifiers', 'indefinite'] },
+  { id: 'g2-8',  level: 'B1', lessonNumber: 8,  minWords: 1000, title: 'Would like', description: 'Expressando desejos com Would like', url: 'https://www.grammarinlevels.com/level2/lesson-8/', difficultyTags: ['desires', 'politeness'] },
+  { id: 'g2-9',  level: 'B1', lessonNumber: 9,  minWords: 1000, title: 'Passive', description: 'Introdução à Voz Passiva', url: 'https://www.grammarinlevels.com/level2/lesson-9/', difficultyTags: ['passive-voice', 'syntax'] },
+  { id: 'g2-10', level: 'B1', lessonNumber: 10, minWords: 1000, title: 'Playing', description: 'Uso de Gerúndio (-ing)', url: 'https://www.grammarinlevels.com/level2/lesson-10/', difficultyTags: ['gerund', 'verbs'] },
+  { id: 'g2-11', level: 'B2', lessonNumber: 11, minWords: 1000, title: 'Myself', description: 'Pronomes reflexivos', url: 'https://www.grammarinlevels.com/level2/lesson-11/', difficultyTags: ['pronouns', 'reflexive'] },
+  { id: 'g2-12', level: 'B2', lessonNumber: 12, minWords: 1000, title: 'There was', description: 'Haver/existir no passado', url: 'https://www.grammarinlevels.com/level2/lesson-12/', difficultyTags: ['past', 'existence'] },
+  { id: 'g2-13', level: 'B2', lessonNumber: 13, minWords: 1000, title: 'Who, which', description: 'Pronomes relativos básicos', url: 'https://www.grammarinlevels.com/level2/lesson-13/', difficultyTags: ['relative-pronouns', 'syntax'] },
+  { id: 'g2-14', level: 'B2', lessonNumber: 14, minWords: 1000, title: 'Negative sentence', description: 'Negação avançada', url: 'https://www.grammarinlevels.com/level2/lesson-14/', difficultyTags: ['syntax', 'negative'] },
+  { id: 'g2-15', level: 'B2', lessonNumber: 15, minWords: 1000, title: 'Question', description: 'Perguntas complexas', url: 'https://www.grammarinlevels.com/level2/lesson-15/', difficultyTags: ['syntax', 'questions'] },
+  { id: 'g2-16', level: 'B2', lessonNumber: 16, minWords: 1000, title: 'Phrasal verbs', description: 'Introdução a Phrasal Verbs', url: 'https://www.grammarinlevels.com/level2/lesson-16/', difficultyTags: ['phrasal-verbs', 'vocabulary'] },
+  { id: 'g2-17', level: 'B2', lessonNumber: 17, minWords: 1000, title: 'Have got', description: 'Uso de Have got', url: 'https://www.grammarinlevels.com/level2/lesson-17/', difficultyTags: ['possession', 'british'] },
+  { id: 'g2-18', level: 'B2', lessonNumber: 18, minWords: 1000, title: 'If, when', description: 'First Conditional e conjunções', url: 'https://www.grammarinlevels.com/level2/lesson-18/', difficultyTags: ['conditionals', 'conjunctions'] },
+  { id: 'g2-19', level: 'B2', lessonNumber: 19, minWords: 1000, title: 'Who likes you?', description: 'Subject Questions', url: 'https://www.grammarinlevels.com/level2/lesson-19/', difficultyTags: ['syntax', 'questions'] },
+  { id: 'g2-20', level: 'B2', lessonNumber: 20, minWords: 1000, title: 'Get better', description: 'Uso de Get como tornar-se', url: 'https://www.grammarinlevels.com/level2/lesson-20/', difficultyTags: ['verbs', 'change'] },
+  { id: 'g2-21', level: 'B2', lessonNumber: 21, minWords: 1000, title: 'This one', description: 'Pronomes demonstrativos e determinantes', url: 'https://www.grammarinlevels.com/level2/lesson-21/', difficultyTags: ['pronouns', 'determiners'] },
+
+  // ── LEVEL 3 (C1/C2) ──────────────────────────────────────────────────────────
+  { id: 'g3-1',  level: 'C1', lessonNumber: 1,  minWords: 2000, title: 'Going to', description: 'Futuro com Going to', url: 'https://www.grammarinlevels.com/level3/lesson-1/', difficultyTags: ['future', 'intentions'] },
+  { id: 'g3-2',  level: 'C1', lessonNumber: 2,  minWords: 2000, title: 'Could, should, would', description: 'Modais no presente e futuro', url: 'https://www.grammarinlevels.com/level3/lesson-2/', difficultyTags: ['modals', 'advice', 'possibility'] },
+  { id: 'g3-3',  level: 'C1', lessonNumber: 3,  minWords: 2000, title: 'Present perfect', description: 'Estudo do Present Perfect', url: 'https://www.grammarinlevels.com/level3/lesson-3/', difficultyTags: ['tenses', 'perfect'] },
+  { id: 'g3-4',  level: 'C1', lessonNumber: 4,  minWords: 2000, title: 'Present perfect continuous', description: 'Estudo do Present Perfect Continuous', url: 'https://www.grammarinlevels.com/level3/lesson-4/', difficultyTags: ['tenses', 'perfect-continuous'] },
+  { id: 'g3-5',  level: 'C1', lessonNumber: 5,  minWords: 2000, title: 'Past perfect', description: 'Estudo do Past Perfect', url: 'https://www.grammarinlevels.com/level3/lesson-5/', difficultyTags: ['tenses', 'past-perfect'] },
+  { id: 'g3-6',  level: 'C1', lessonNumber: 6,  minWords: 2000, title: 'I want you to win', description: 'Estrutura Verbo + Objeto + Infinitivo', url: 'https://www.grammarinlevels.com/level3/lesson-6/', difficultyTags: ['syntax', 'verb-patterns'] },
+  { id: 'g3-7',  level: 'C1', lessonNumber: 7,  minWords: 2000, title: 'Gonna, wanna, gotta', description: 'Reduções informais na fala', url: 'https://www.grammarinlevels.com/level3/lesson-7/', difficultyTags: ['informal', 'reductions', 'speaking'] },
+  { id: 'g3-8',  level: 'C1', lessonNumber: 8,  minWords: 2000, title: 'Let, make, help', description: 'Causative Verbs', url: 'https://www.grammarinlevels.com/level3/lesson-8/', difficultyTags: ['verbs', 'causative'] },
+  { id: 'g3-9',  level: 'C1', lessonNumber: 9,  minWords: 2000, title: 'May, might, mustn’t', description: 'Modais de possibilidade e proibição', url: 'https://www.grammarinlevels.com/level3/lesson-9/', difficultyTags: ['modals', 'possibility', 'prohibition'] },
+  { id: 'g3-10', level: 'C1', lessonNumber: 10, minWords: 2000, title: 'Prepositions – place', description: 'Preposições de lugar avançadas', url: 'https://www.grammarinlevels.com/level3/lesson-10/', difficultyTags: ['prepositions', 'place'] },
+  { id: 'g3-11', level: 'C2', lessonNumber: 11, minWords: 2000, title: 'Prepositions – time', description: 'Preposições de tempo avançadas', url: 'https://www.grammarinlevels.com/level3/lesson-11/', difficultyTags: ['prepositions', 'time'] },
+  { id: 'g3-12', level: 'C2', lessonNumber: 12, minWords: 2000, title: 'Could have done', description: 'Modais no passado (Modal Perfect)', url: 'https://www.grammarinlevels.com/level3/lesson-12/', difficultyTags: ['modal-perfect', 'past-regret'] },
+  { id: 'g3-13', level: 'C2', lessonNumber: 13, minWords: 2000, title: 'If', description: 'Second and Third Conditionals', url: 'https://www.grammarinlevels.com/level3/lesson-13/', difficultyTags: ['conditionals', 'hypothetical'] },
+  { id: 'g3-14', level: 'C2', lessonNumber: 14, minWords: 2000, title: 'Phrasal verbs', description: 'Phrasal Verbs avançados', url: 'https://www.grammarinlevels.com/level3/lesson-14/', difficultyTags: ['phrasal-verbs', 'vocabulary'] },
+  { id: 'g3-15', level: 'C2', lessonNumber: 15, minWords: 2000, title: 'I think I know her', description: 'Relative clauses omitidas', url: 'https://www.grammarinlevels.com/level3/lesson-15/', difficultyTags: ['syntax', 'relative-clauses'] },
+  { id: 'g3-16', level: 'C2', lessonNumber: 16, minWords: 2000, title: 'Where are you from?', description: 'Preposições no final de perguntas', url: 'https://www.grammarinlevels.com/level3/lesson-16/', difficultyTags: ['syntax', 'questions', 'prepositions'] },
+  { id: 'g3-17', level: 'C2', lessonNumber: 17, minWords: 2000, title: 'The woman that I met', description: 'Defining Relative Clauses', url: 'https://www.grammarinlevels.com/level3/lesson-17/', difficultyTags: ['syntax', 'relative-clauses'] },
+  { id: 'g3-18', level: 'C2', lessonNumber: 18, minWords: 2000, title: 'I know why she came', description: 'Noun Clauses', url: 'https://www.grammarinlevels.com/level3/lesson-18/', difficultyTags: ['syntax', 'noun-clauses'] },
+  { id: 'g3-19', level: 'C2', lessonNumber: 19, minWords: 2000, title: 'Used to', description: 'Hábitos no passado com Used to', url: 'https://www.grammarinlevels.com/level3/lesson-19/', difficultyTags: ['past-habits', 'grammar'] },
+  { id: 'g3-20', level: 'C2', lessonNumber: 20, minWords: 2000, title: 'Summary', description: 'Resumo gramatical de nível avançado', url: 'https://www.grammarinlevels.com/level3/lesson-20/', difficultyTags: ['advanced', 'summary'] },
+];
+
