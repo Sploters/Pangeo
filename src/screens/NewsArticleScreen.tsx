@@ -21,7 +21,7 @@ const LEVEL_META: Record<1|2|3, { color: string; soft: string; label: string }> 
 export default function NewsArticleScreen() {
   const navigation = useNavigation<Nav>();
   const route      = useRoute<Route>();
-  const { items }  = useVaultStore();
+  const { items, addItem }  = useVaultStore();
 
   const article = NEWS_ARTICLES.find((a) => a.id === route.params.articleId)!;
   const meta    = LEVEL_META[article.level];
@@ -40,6 +40,30 @@ export default function NewsArticleScreen() {
   );
 
   const [tooltip, setTooltip] = useState<VocabSuggestion | null>(null);
+
+  const captureFromTooltip = (v: VocabSuggestion) => {
+    const now = new Date();
+    addItem({
+      term: v.term,
+      type: v.type,
+      lang: 'en→pt',
+      gloss: v.gloss,
+      source: v.source,
+      date: `${now.toLocaleDateString('pt-BR')} · ${now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`,
+      example: v.example ?? '',
+      srs: 'new',
+      strength: 0,
+      tags: [],
+      function: v.function,
+      level: v.level,
+      stability: 0,
+      difficulty: 5,
+      lapses: 0,
+      lastReviewAt: 0,
+      nextReviewAt: 0,
+    });
+    setTooltip(null);
+  };
 
   // Split text into word tokens, marking vocab words
   const tokens = useMemo(() => {
@@ -132,6 +156,34 @@ export default function NewsArticleScreen() {
               <Text style={s.tooltipTerm}>{tooltip.term}</Text>
               <Text style={s.tooltipGloss}>{tooltip.gloss}</Text>
               {tooltip.example && <Text style={s.tooltipExample}>"{tooltip.example}"</Text>}
+
+              {/* Capture button */}
+              {(() => {
+                const alreadyCaptured = items.some(
+                  (i) => i.term.toLowerCase() === tooltip.term.toLowerCase(),
+                );
+                return (
+                  <TouchableOpacity
+                    onPress={() => !alreadyCaptured && captureFromTooltip(tooltip)}
+                    disabled={alreadyCaptured}
+                    style={{
+                      marginTop: 16,
+                      backgroundColor: alreadyCaptured ? Colors.mossSoft : Colors.moss,
+                      borderRadius: Radius.full,
+                      paddingVertical: 11,
+                      alignItems: 'center',
+                    }}
+                    activeOpacity={0.85}
+                  >
+                    <Text style={{
+                      fontSize: 13, fontWeight: '700',
+                      color: alreadyCaptured ? Colors.moss : Colors.sand,
+                    }}>
+                      {alreadyCaptured ? '✓ No Vault' : 'Capturar →'}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })()}
             </View>
           </TouchableOpacity>
         </Modal>
