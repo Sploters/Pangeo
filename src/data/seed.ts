@@ -45,6 +45,7 @@ export type VaultItem = {
   strength: number;
   tags: string[];
   function?: CommunicativeFunction;
+  level?: string;          // nível CEFR: A1 | A2 | B1 | B2 | C1 | C2
   // FSRS
   stability: number;      // dias até 90% retenção (0 = nunca revisado)
   difficulty: number;     // dificuldade 1-10 (padrão 5)

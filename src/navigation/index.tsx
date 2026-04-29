@@ -29,7 +29,7 @@ export type RootStackParamList = {
   Main: undefined;
   Shadowing: undefined;
   SRS: undefined;
-  Capture: undefined;
+  Capture: { itemId?: number } | undefined;
   Pronunciation: undefined;
   Zipf: undefined;
   Profile: undefined;

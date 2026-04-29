@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet, TextInput,
+  View, Text, ScrollView, TouchableOpacity, StyleSheet, TextInput, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -12,12 +12,11 @@ import { VaultItem, COMMUNICATIVE_FUNCTIONS } from '../data/seed';
 import { RootStackParamList } from '../navigation';
 
 const FILTERS = [
-  { id: 'all',        lbl: 'Todos' },
-  { id: 'due',        lbl: 'Para hoje' },
-  { id: 'chunk',      lbl: 'Chunks' },
-  { id: 'reduction',  lbl: 'Reductions' },
-  { id: 'collocation',lbl: 'Collocations' },
-  { id: 'phonetic',   lbl: 'Fonética' },
+  { id: 'all',         lbl: 'Todos' },
+  { id: 'chunk',       lbl: 'Chunks' },
+  { id: 'reduction',   lbl: 'Reductions' },
+  { id: 'collocation', lbl: 'Collocations' },
+  { id: 'phonetic',    lbl: 'Fonética' },
 ];
 
 function typeColor(type: VaultItem['type']) {
@@ -32,28 +31,73 @@ function typeColor(type: VaultItem['type']) {
   }
 }
 
+function levelColor(level?: string): { c: string; soft: string } | null {
+  switch (level) {
+    case 'A1': return { c: Colors.moss,   soft: Colors.mossSoft };
+    case 'A2': return { c: Colors.ocean,  soft: Colors.oceanSoft };
+    case 'B1': return { c: Colors.gold,   soft: Colors.goldSoft };
+    case 'B2': return { c: Colors.amber,  soft: Colors.amberSoft };
+    case 'C1': return { c: Colors.coral,  soft: Colors.coralSoft };
+    case 'C2': return { c: Colors.purple, soft: Colors.purpleSoft };
+    default:   return null;
+  }
+}
+
 function fnMeta(id: string) {
   return COMMUNICATIVE_FUNCTIONS.find((f) => f.id === id);
 }
 
 export default function VaultScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { items } = useVaultStore();
+  const { items, removeItem } = useVaultStore();
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
 
-  let filtered = items;
-  if (filter === 'due') filtered = filtered.filter((v) => v.srs === 'due' || v.srs === 'new');
-  else if (filter === 'chunk') filtered = filtered.filter((v) =>
-    ['chunk', 'phrase', 'idiom', 'gap-filler', 'collocation'].includes(v.type)
-  );
-  else if (filter !== 'all') filtered = filtered.filter((v) => v.type === filter);
-  if (search) filtered = filtered.filter((v) =>
-    v.term.toLowerCase().includes(search.toLowerCase()) ||
-    v.gloss.toLowerCase().includes(search.toLowerCase())
+  const dueCount = useMemo(
+    () => items.filter((v) => v.srs === 'due' || v.srs === 'new').length,
+    [items],
   );
 
-  const dueCount = items.filter((v) => v.srs === 'due' || v.srs === 'new').length;
+  const filtered = useMemo(() => {
+    let result = items;
+    if (filter === 'chunk') {
+      result = result.filter((v) =>
+        ['chunk', 'phrase', 'idiom', 'gap-filler', 'collocation'].includes(v.type)
+      );
+    } else if (filter !== 'all') {
+      result = result.filter((v) => v.type === filter);
+    }
+    if (search) {
+      const q = search.toLowerCase();
+      result = result.filter((v) =>
+        v.term.toLowerCase().includes(q) || v.gloss.toLowerCase().includes(q)
+      );
+    }
+    return result;
+  }, [items, filter, search]);
+
+  function handleItemMenu(item: VaultItem) {
+    Alert.alert(item.term, undefined, [
+      {
+        text: 'Editar',
+        onPress: () => navigation.navigate('Capture', { itemId: item.id }),
+      },
+      {
+        text: 'Remover',
+        style: 'destructive',
+        onPress: () =>
+          Alert.alert(
+            'Remover palavra?',
+            `"${item.term}" será removida do Vault permanentemente.`,
+            [
+              { text: 'Cancelar', style: 'cancel' },
+              { text: 'Remover', style: 'destructive', onPress: () => removeItem(item.id) },
+            ]
+          ),
+      },
+      { text: 'Cancelar', style: 'cancel' },
+    ]);
+  }
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -98,32 +142,32 @@ export default function VaultScreen() {
         </View>
       </View>
 
-      {/* Filter pills */}
+      {/* Filter chips */}
       <ScrollView
-        horizontal showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: Spacing.lg, gap: 6, paddingBottom: 12 }}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.filterScroll}
+        style={{ flexGrow: 0 }}
       >
         {FILTERS.map((f) => {
-          const count = f.id === 'all' ? items.length :
-            f.id === 'due' ? dueCount :
-            items.filter((v) => v.type === f.id).length;
           const active = filter === f.id;
           return (
             <TouchableOpacity
               key={f.id}
               onPress={() => setFilter(f.id)}
-              style={[styles.pill, active && styles.pillActive]}
-              activeOpacity={0.8}
+              style={[styles.filterChip, active && styles.filterChipActive]}
+              activeOpacity={0.7}
             >
-              <Text style={[styles.pillText, active && { color: Colors.sand }]}>{f.lbl}</Text>
-              <Text style={[styles.pillCount, active && { color: Colors.sand }]}>{count}</Text>
+              <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
+                {f.lbl}
+              </Text>
             </TouchableOpacity>
           );
         })}
       </ScrollView>
 
       {/* Items */}
-      <ScrollView contentContainerStyle={{ paddingHorizontal: Spacing.lg, paddingBottom: 32 }}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: Spacing.lg, paddingBottom: 32 }}>
         {filtered.length === 0 && (
           <View style={{ alignItems: 'center', paddingTop: 48, paddingHorizontal: 24 }}>
             <Text style={{ fontSize: 36, marginBottom: 12 }}>📚</Text>
@@ -141,6 +185,7 @@ export default function VaultScreen() {
           const { c, soft } = typeColor(v.type);
           const srsColor = v.srs === 'due' ? Colors.coral : v.srs === 'mature' ? Colors.moss : Colors.ocean;
           const fn = v.function ? fnMeta(v.function) : null;
+          const lvlColor = levelColor(v.level);
           return (
             <View key={v.id} style={styles.item}>
               <View style={styles.itemTop}>
@@ -148,6 +193,11 @@ export default function VaultScreen() {
                   <View style={styles.itemTermRow}>
                     <Text style={styles.itemTerm}>{v.term}</Text>
                     <PgChip c={c} soft={soft}>{v.type}</PgChip>
+                    {lvlColor && (
+                      <View style={[styles.levelBadge, { backgroundColor: lvlColor.soft }]}>
+                        <Text style={[styles.levelBadgeText, { color: lvlColor.c }]}>{v.level}</Text>
+                      </View>
+                    )}
                     {fn && (
                       <View style={styles.fnBadge}>
                         <Text style={styles.fnBadgeText}>{fn.emoji} {fn.lbl}</Text>
@@ -159,6 +209,14 @@ export default function VaultScreen() {
                     <Text style={styles.itemExample}>"{v.example}"</Text>
                   ) : null}
                 </View>
+                <TouchableOpacity
+                  onPress={() => handleItemMenu(v)}
+                  style={styles.menuBtn}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  activeOpacity={0.6}
+                >
+                  <Text style={styles.menuDots}>···</Text>
+                </TouchableOpacity>
               </View>
               <View style={styles.itemFooter}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
@@ -211,32 +269,48 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   statLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 0.6, color: Colors.inkMute, textTransform: 'uppercase' },
-  statValue: { fontSize: 22, fontWeight: '600', color: Colors.ink, fontFamily: undefined },
-  pill: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    paddingHorizontal: 10, paddingVertical: 5,
-    borderRadius: Radius.full,
-    borderWidth: 1, borderColor: Colors.lineStrong,
+  statValue: { fontSize: 22, fontWeight: '600', color: Colors.ink },
+  filterScroll: {
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: 12,
+    gap: 8,
+    alignItems: 'flex-start',
   },
-  pillActive: { backgroundColor: Colors.ink, borderColor: Colors.ink },
-  pillText: { fontSize: 12, fontWeight: '600', color: Colors.inkSoft },
-  pillCount: { fontSize: 11, opacity: 0.65, color: Colors.inkSoft },
+  filterChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 7,
+    borderRadius: Radius.full,
+    backgroundColor: Colors.paper,
+    borderWidth: 1,
+    borderColor: Colors.lineStrong,
+  },
+  filterChipActive: { backgroundColor: Colors.ink, borderColor: Colors.ink },
+  filterChipText: { fontSize: 12, fontWeight: '600', color: Colors.inkSoft },
+  filterChipTextActive: { color: Colors.sand },
   item: {
     backgroundColor: Colors.paper, borderWidth: 0.5, borderColor: Colors.line,
     borderRadius: 14, padding: 14, marginBottom: 8,
   },
-  itemTop: { marginBottom: 8 },
+  itemTop: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 8 },
   itemTermRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 },
   itemTerm: { fontSize: 19, fontWeight: '600', letterSpacing: -0.3, lineHeight: 24, color: Colors.ink },
   itemGloss: { fontSize: 12.5, color: Colors.inkSoft, lineHeight: 18 },
   itemExample: { fontSize: 12, fontStyle: 'italic', color: Colors.inkMute, marginTop: 5, lineHeight: 18 },
   itemFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   itemSource: { fontSize: 11, color: Colors.inkMute },
+  levelBadge: {
+    borderRadius: Radius.full, paddingHorizontal: 7, paddingVertical: 2,
+  },
+  levelBadgeText: { fontSize: 9.5, fontWeight: '700' },
   fnBadge: {
     backgroundColor: Colors.purpleSoft, borderRadius: Radius.full,
     paddingHorizontal: 7, paddingVertical: 2,
   },
   fnBadgeText: { fontSize: 9.5, fontWeight: '600', color: Colors.purple },
+  menuBtn: {
+    paddingLeft: 8, paddingTop: 2,
+  },
+  menuDots: { fontSize: 18, color: Colors.inkMute, letterSpacing: 1 },
   fab: {
     position: 'absolute', bottom: 30, right: 22,
     width: 56, height: 56, borderRadius: 28,

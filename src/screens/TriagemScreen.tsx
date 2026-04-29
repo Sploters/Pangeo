@@ -48,6 +48,7 @@ export default function TriagemScreen() {
       strength: 0,
       tags: [],
       function: current.function,
+      level: current.level,
       stability: 0,
       difficulty: 5,
       lapses: 0,

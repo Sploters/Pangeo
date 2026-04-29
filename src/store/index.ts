@@ -22,6 +22,8 @@ type VaultStore = {
   items: VaultItem[];
   addItem: (item: Omit<VaultItem, 'id'>) => void;
   updateSRS: (id: number, patch: Partial<VaultItem>) => void;
+  updateItem: (id: number, patch: Omit<VaultItem, 'id'>) => void;
+  removeItem: (id: number) => void;
 };
 
 export const useVaultStore = create<VaultStore>()(
@@ -34,6 +36,12 @@ export const useVaultStore = create<VaultStore>()(
         set((s) => ({
           items: s.items.map((v) => (v.id === id ? { ...v, ...patch } : v)),
         })),
+      updateItem: (id, patch) =>
+        set((s) => ({
+          items: s.items.map((v) => (v.id === id ? { ...patch, id } : v)),
+        })),
+      removeItem: (id) =>
+        set((s) => ({ items: s.items.filter((v) => v.id !== id) })),
     }),
     { name: 'pangeo-vault-v2', storage: createJSONStorage(() => AsyncStorage) }
   )

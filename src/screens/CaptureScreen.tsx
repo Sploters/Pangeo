@@ -3,11 +3,14 @@ import {
   View, Text, TouchableOpacity, StyleSheet, TextInput,
   KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { Colors, Radius, Spacing } from '../theme';
 import { PgButton, Icons } from '../components';
-import { useVaultStore } from '../store';
+import { useVaultStore, useProfileStore } from '../store';
 import { CommunicativeFunction, COMMUNICATIVE_FUNCTIONS } from '../data/seed';
+import { RootStackParamList } from '../navigation';
+
+type Route = RouteProp<RootStackParamList, 'Capture'>;
 
 const TYPES = [
   { id: 'word',        lbl: 'Palavra' },
@@ -19,6 +22,8 @@ const TYPES = [
   { id: 'phonetic',    lbl: 'Fonética' },
   { id: 'gap-filler',  lbl: 'Gap-filler' },
 ] as const;
+
+const LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'] as const;
 
 // Types that benefit from a communicative function tag
 const CHUNK_TYPES = new Set(['phrase', 'chunk', 'collocation', 'idiom', 'gap-filler']);
@@ -48,21 +53,31 @@ function todayLabel() {
 
 export default function CaptureScreen() {
   const navigation = useNavigation();
-  const [term, setTerm] = useState('');
-  const [gloss, setGloss] = useState('');
-  const [example, setExample] = useState('');
-  const [source, setSource] = useState('');
-  const [type, setType] = useState<typeof TYPES[number]['id']>('phrase');
-  const [fn, setFn] = useState<CommunicativeFunction | undefined>(undefined);
+  const route = useRoute<Route>();
+  const itemId = route.params?.itemId;
+
+  const { addItem, updateItem, items } = useVaultStore();
+  const { level: profileLevel } = useProfileStore();
+
+  const existingItem = itemId ? items.find((v) => v.id === itemId) : null;
+  const isEditing = !!existingItem;
+
+  const [term, setTerm]       = useState(existingItem?.term ?? '');
+  const [gloss, setGloss]     = useState(existingItem?.gloss ?? '');
+  const [example, setExample] = useState(existingItem?.example ?? '');
+  const [source, setSource]   = useState(existingItem?.source ?? '');
+  const [type, setType]       = useState<typeof TYPES[number]['id']>(existingItem?.type ?? 'phrase');
+  const [fn, setFn]           = useState<CommunicativeFunction | undefined>(existingItem?.function ?? undefined);
+  const [level, setLevel]     = useState<string>(existingItem?.level ?? profileLevel ?? 'B1');
   const [suggestion, setSuggestion] = useState<DictSuggestion | null>(null);
-  const [fetching, setFetching] = useState(false);
-  const { addItem } = useVaultStore();
+  const [fetching, setFetching]     = useState(false);
 
   const showFunctionPicker = CHUNK_TYPES.has(type);
   const canSave = term.trim().length > 0 && gloss.trim().length > 0;
 
-  // ── Auto-fill from Free Dictionary API ──────────────────────────────────────
+  // ── Auto-fill from Free Dictionary API (only when creating) ─────────────────
   useEffect(() => {
+    if (isEditing) return;
     const trimmed = term.trim();
     setSuggestion(null);
     if (trimmed.length < 2) return;
@@ -91,7 +106,6 @@ export default function CaptureScreen() {
           partOfSpeech: meaning?.partOfSpeech || '',
         });
 
-        // Auto-suggest type based on part of speech
         if (meaning?.partOfSpeech && POS_TO_TYPE[meaning.partOfSpeech]) {
           setType(POS_TO_TYPE[meaning.partOfSpeech]);
         }
@@ -107,24 +121,31 @@ export default function CaptureScreen() {
 
   const handleSave = () => {
     if (!canSave) return;
-    addItem({
+    const data = {
       term: term.trim(),
       type,
-      lang: 'en→pt',
+      lang: existingItem?.lang ?? 'en→pt',
       gloss: gloss.trim(),
       source: source.trim() || 'Manual',
-      date: todayLabel(),
+      date: existingItem?.date ?? todayLabel(),
       example: example.trim(),
-      srs: 'new',
-      strength: 0,
-      tags: [],
+      srs: existingItem?.srs ?? 'new',
+      strength: existingItem?.strength ?? 0,
+      tags: existingItem?.tags ?? [],
       function: showFunctionPicker ? fn : undefined,
-      stability: 0,
-      difficulty: 5,
-      lapses: 0,
-      lastReviewAt: 0,
-      nextReviewAt: 0,
-    });
+      level,
+      stability:    existingItem?.stability    ?? 0,
+      difficulty:   existingItem?.difficulty   ?? 5,
+      lapses:       existingItem?.lapses       ?? 0,
+      lastReviewAt: existingItem?.lastReviewAt ?? 0,
+      nextReviewAt: existingItem?.nextReviewAt ?? 0,
+    };
+
+    if (isEditing && existingItem) {
+      updateItem(existingItem.id, data);
+    } else {
+      addItem(data);
+    }
     navigation.goBack();
   };
 
@@ -143,8 +164,8 @@ export default function CaptureScreen() {
             {/* Header */}
             <View style={styles.sheetHeader}>
               <View>
-                <Text style={styles.sheetEye}>CAPTURAR</Text>
-                <Text style={styles.sheetTitle}>Nova entrada no Vault</Text>
+                <Text style={styles.sheetEye}>{isEditing ? 'EDITAR' : 'CAPTURAR'}</Text>
+                <Text style={styles.sheetTitle}>{isEditing ? 'Editar entrada' : 'Nova entrada no Vault'}</Text>
               </View>
               <TouchableOpacity onPress={() => navigation.goBack()} style={styles.closeBtn} activeOpacity={0.7}>
                 <Icons.Close size={18} color={Colors.ink} />
@@ -160,7 +181,7 @@ export default function CaptureScreen() {
                     value={term}
                     onChangeText={setTerm}
                     style={[styles.termInput, { flex: 1 }]}
-                    autoFocus
+                    autoFocus={!isEditing}
                     placeholder="Palavra ou frase..."
                     placeholderTextColor={Colors.inkMute}
                     returnKeyType="next"
@@ -273,6 +294,25 @@ export default function CaptureScreen() {
                 </View>
               </View>
 
+              {/* Level */}
+              <View style={styles.fieldWrap}>
+                <Text style={styles.fieldLabel}>NÍVEL CEFR</Text>
+                <View style={styles.typeRow}>
+                  {LEVELS.map((l) => (
+                    <TouchableOpacity
+                      key={l}
+                      onPress={() => setLevel(l)}
+                      style={[styles.typePill, level === l && styles.typePillLevel]}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={[styles.typePillText, level === l && { color: Colors.sand }]}>
+                        {l}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
               {/* Communicative Function — only for chunk-like types */}
               {showFunctionPicker && (
                 <View style={styles.fieldWrap}>
@@ -318,7 +358,7 @@ export default function CaptureScreen() {
                   style={!canSave ? { opacity: 0.45 } : undefined}
                 >
                   <Text style={{ fontSize: 14, fontWeight: '700', color: Colors.sand }}>
-                    Adicionar ao Vault
+                    {isEditing ? 'Salvar alterações' : 'Adicionar ao Vault'}
                   </Text>
                 </PgButton>
               </View>
@@ -382,7 +422,8 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: Colors.lineStrong,
   },
   typePillActive: { backgroundColor: Colors.moss, borderColor: Colors.moss },
-  typePillFn: { backgroundColor: Colors.ocean, borderColor: Colors.ocean },
+  typePillLevel:  { backgroundColor: Colors.ocean, borderColor: Colors.ocean },
+  typePillFn:     { backgroundColor: Colors.purple, borderColor: Colors.purple },
   typePillText: { fontSize: 12, fontWeight: '600', color: Colors.inkSoft },
 
   // Suggestion card
