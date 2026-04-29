@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useRef, useState } from 'react';
+import {
+  View, Text, ScrollView, TouchableOpacity, StyleSheet, PanResponder, Animated, Dimensions,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Colors, Radius, Spacing } from '../theme';
@@ -47,18 +49,57 @@ const SCHWA_LETTER_MAP: Record<string, number[]> = {
   comfortable: [4, 8],
 };
 
-export default function PronunciationScreen() {
-  const navigation = useNavigation();
-  const [tab, setTab] = useState<Tab>('schwa');
-  const [activeSchwa, setActiveSchwa] = useState(0);
+const SW = Dimensions.get('window').width;
 
-  const linkItems = CONNECTED_SPEECH.filter(
-    (c) => c.phenomenon === 'linking' || c.phenomenon === 'intrusion',
-  );
-  const assimItems = CONNECTED_SPEECH.filter((c) => c.phenomenon === 'assimilation');
+export default function PronunciationScreen() {
+  const navigation   = useNavigation();
+  const [tabIndex, setTabIndex] = useState(0);
+  const [activeSchwa, setActiveSchwa] = useState(0);
+  const tabBarRef    = useRef<ScrollView>(null);
+  const tabIndexRef  = useRef(0);
+  const pagerX       = useRef(new Animated.Value(0)).current;
+  const snapRef      = useRef<(i: number) => void>(() => {});
+
+  const linkItems    = CONNECTED_SPEECH.filter((c) => c.phenomenon === 'linking' || c.phenomenon === 'intrusion');
+  const assimItems   = CONNECTED_SPEECH.filter((c) => c.phenomenon === 'assimilation');
   const elisionItems = CONNECTED_SPEECH.filter((c) => c.phenomenon === 'elision');
 
-  const activeTab = TABS.find((t) => t.id === tab)!;
+  const snapToTab = (index: number) => {
+    tabIndexRef.current = index;
+    setTabIndex(index);
+    tabBarRef.current?.scrollTo({ x: Math.max(0, index * 90 - 50), animated: true });
+    Animated.spring(pagerX, {
+      toValue: -(index * SW),
+      useNativeDriver: false,
+      tension: 120,
+      friction: 20,
+    }).start();
+  };
+  snapRef.current = snapToTab;
+
+  const swipePan = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, gs) =>
+        Math.abs(gs.dx) > 8 && Math.abs(gs.dx) > Math.abs(gs.dy) * 1.2,
+      onPanResponderGrant: () => { pagerX.stopAnimation(); },
+      onPanResponderMove: (_, gs) => {
+        const base = -(tabIndexRef.current * SW);
+        let nx = base + gs.dx;
+        if (nx > 0) nx *= 0.15;
+        const minX = -((TABS.length - 1) * SW);
+        if (nx < minX) nx = minX + (nx - minX) * 0.15;
+        pagerX.setValue(nx);
+      },
+      onPanResponderRelease: (_, gs) => {
+        const threshold = SW * 0.25;
+        let next = tabIndexRef.current;
+        if (gs.dx < -threshold && next < TABS.length - 1) next++;
+        else if (gs.dx > threshold && next > 0) next--;
+        snapRef.current(next);
+      },
+      onPanResponderTerminate: () => { snapRef.current(tabIndexRef.current); },
+    })
+  ).current;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -73,22 +114,21 @@ export default function PronunciationScreen() {
         </View>
       </View>
 
-      {/* Tabs — horizontal scroll */}
+      {/* Tab pills */}
       <ScrollView
+        ref={tabBarRef}
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.tabScroll}
+        style={{ flexGrow: 0 }}
       >
-        {TABS.map((t) => {
-          const active = tab === t.id;
+        {TABS.map((t, i) => {
+          const active = tabIndex === i;
           return (
             <TouchableOpacity
               key={t.id}
-              onPress={() => setTab(t.id)}
-              style={[
-                styles.tab,
-                active && { backgroundColor: t.color, borderColor: t.color },
-              ]}
+              onPress={() => snapRef.current(i)}
+              style={[styles.tab, active && { backgroundColor: t.color, borderColor: t.color }]}
               activeOpacity={0.8}
             >
               {t.mono ? (
@@ -100,11 +140,12 @@ export default function PronunciationScreen() {
         })}
       </ScrollView>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 48 }}>
+      {/* Pager — all tabs mounted side by side, follow finger in real time */}
+      <View style={{ flex: 1, overflow: 'hidden' }} {...swipePan.panHandlers}>
+        <Animated.View style={{ flexDirection: 'row', width: SW * TABS.length, flex: 1, transform: [{ translateX: pagerX }] }}>
 
-        {/* ── SCHWA ── */}
-        {tab === 'schwa' && (
-          <>
+          {/* ── Schwa ── */}
+          <ScrollView style={{ width: SW }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 48 }}>
             <View style={{ paddingHorizontal: Spacing.lg, paddingBottom: 16 }}>
               <View style={styles.heroCard}>
                 <Text style={styles.heroSchwa}>ə</Text>
@@ -132,10 +173,7 @@ export default function PronunciationScreen() {
                     <View style={styles.wordRow}>
                       <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
                         {letters.map((l, li) => (
-                          <Text
-                            key={li}
-                            style={[styles.wordLetter, schwaIdxs.includes(li) && styles.schwaLetter]}
-                          >
+                          <Text key={li} style={[styles.wordLetter, schwaIdxs.includes(li) && styles.schwaLetter]}>
                             {l}
                           </Text>
                         ))}
@@ -151,12 +189,10 @@ export default function PronunciationScreen() {
                 );
               })}
             </View>
-          </>
-        )}
+          </ScrollView>
 
-        {/* ── REDUCTIONS ── */}
-        {tab === 'reduce' && (
-          <>
+          {/* ── Reductions ── */}
+          <ScrollView style={{ width: SW }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 48 }}>
             <View style={{ paddingHorizontal: Spacing.lg, paddingBottom: 16 }}>
               <View style={[styles.explainerCard, { borderLeftWidth: 3, borderLeftColor: Colors.ocean }]}>
                 <Text style={[styles.explainerLabel, { color: Colors.ocean }]}>FORMAS NATURAIS DA FALA</Text>
@@ -181,37 +217,25 @@ export default function PronunciationScreen() {
                 </View>
               ))}
             </View>
-          </>
-        )}
+          </ScrollView>
 
-        {/* ── LINKING + INTRUSION ── */}
-        {tab === 'link' && (
-          <ConnectedSpeechSection
-            title="Linking & Intrusion"
-            items={linkItems}
-            phenomena={['linking', 'intrusion']}
-          />
-        )}
+          {/* ── Linking + Intrusion ── */}
+          <ScrollView style={{ width: SW }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 48 }}>
+            <ConnectedSpeechSection items={linkItems} phenomena={['linking', 'intrusion']} />
+          </ScrollView>
 
-        {/* ── ASSIMILATION ── */}
-        {tab === 'assim' && (
-          <ConnectedSpeechSection
-            title="Assimilação"
-            items={assimItems}
-            phenomena={['assimilation']}
-          />
-        )}
+          {/* ── Assimilation ── */}
+          <ScrollView style={{ width: SW }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 48 }}>
+            <ConnectedSpeechSection items={assimItems} phenomena={['assimilation']} />
+          </ScrollView>
 
-        {/* ── ELISION ── */}
-        {tab === 'elision' && (
-          <ConnectedSpeechSection
-            title="Elision"
-            items={elisionItems}
-            phenomena={['elision']}
-          />
-        )}
+          {/* ── Elision ── */}
+          <ScrollView style={{ width: SW }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 48 }}>
+            <ConnectedSpeechSection items={elisionItems} phenomena={['elision']} />
+          </ScrollView>
 
-      </ScrollView>
+        </Animated.View>
+      </View>
     </SafeAreaView>
   );
 }
@@ -221,25 +245,18 @@ function ConnectedSpeechSection({
   items,
   phenomena,
 }: {
-  title: string;
   items: typeof CONNECTED_SPEECH;
   phenomena: ConnectedSpeechPhenomenon[];
 }) {
-  const mainMeta = PHENOMENON_META[phenomena[0]];
-
   return (
     <>
-      {/* Hero explainer */}
       <View style={{ paddingHorizontal: Spacing.lg, paddingBottom: 16 }}>
         {phenomena.map((ph) => {
           const meta = PHENOMENON_META[ph];
           return (
             <View
               key={ph}
-              style={[
-                styles.explainerCard,
-                { borderLeftWidth: 3, borderLeftColor: meta.color, marginBottom: 10 },
-              ]}
+              style={[styles.explainerCard, { borderLeftWidth: 3, borderLeftColor: meta.color, marginBottom: 10 }]}
             >
               <Text style={[styles.explainerLabel, { color: meta.color }]}>{meta.title.toUpperCase()}</Text>
               <Text style={styles.explainerText}>{meta.description}</Text>
@@ -247,44 +264,28 @@ function ConnectedSpeechSection({
           );
         })}
       </View>
-
-      {/* Items */}
       <View style={{ paddingHorizontal: Spacing.lg, gap: 10 }}>
         {items.map((item, i) => {
           const meta = PHENOMENON_META[item.phenomenon];
           return (
             <View key={i} style={[styles.csCard, { borderLeftColor: meta.color }]}>
-              {/* Phenomenon badge */}
               <View style={[styles.csBadge, { backgroundColor: meta.soft }]}>
                 <Text style={[styles.csBadgeText, { color: meta.color }]}>
                   {item.phenomenon.toUpperCase()}
                 </Text>
               </View>
-
-              {/* Full → Connected */}
               <View style={styles.csTransform}>
                 <Text style={styles.csFull}>{item.full}</Text>
                 <Text style={styles.csArrow}>→</Text>
                 <Text style={[styles.csConnected, { color: meta.color }]}>{item.connected}</Text>
               </View>
-
-              {/* IPA */}
               <Text style={styles.csPhon}>{item.phon}</Text>
-
-              {/* Example */}
               <View style={styles.csDivider} />
               <Text style={styles.csExample}>"{item.example}"</Text>
-
-              {/* Tip */}
               <View style={[styles.csTipBox, { backgroundColor: meta.soft }]}>
                 <Text style={[styles.csTip, { color: meta.color }]}>💡 {item.tip}</Text>
               </View>
-
-              {/* Play button */}
-              <TouchableOpacity
-                style={[styles.csPlayBtn, { backgroundColor: meta.color }]}
-                activeOpacity={0.8}
-              >
+              <TouchableOpacity style={[styles.csPlayBtn, { backgroundColor: meta.color }]} activeOpacity={0.8}>
                 <Icons.Play size={13} color="#fff" />
               </TouchableOpacity>
             </View>
@@ -313,16 +314,13 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: 20, fontWeight: '700', color: Colors.ink, letterSpacing: -0.3 },
 
-  tabScroll: {
-    paddingHorizontal: Spacing.lg, paddingBottom: 14, gap: 6, flexDirection: 'row',
-  },
+  tabScroll: { paddingHorizontal: Spacing.lg, paddingBottom: 14, gap: 6, flexDirection: 'row' },
   tab: {
-    height: 36,
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    paddingHorizontal: 14, paddingVertical: 9, borderRadius: 12,
+    height: 36, flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingHorizontal: 14, borderRadius: 12,
     borderWidth: 0.5, borderColor: Colors.line, backgroundColor: Colors.paper,
   },
-  tabMono: { fontSize: 16, fontWeight: '700', fontFamily: 'monospace', color: Colors.ink },
+  tabMono:  { fontSize: 16, fontWeight: '700', fontFamily: 'monospace', color: Colors.ink },
   tabLabel: { fontSize: 13, fontWeight: '600', color: Colors.ink },
 
   sectionTitle: {
@@ -336,25 +334,22 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.paper, borderRadius: Radius.lg,
     borderWidth: 0.5, borderColor: Colors.line, padding: 20,
   },
-  heroSchwa: { fontSize: 80, color: Colors.coral, lineHeight: 90, letterSpacing: -3 },
-  heroLabel: {
-    fontSize: 11, fontWeight: '700', letterSpacing: 1,
-    color: Colors.inkMute, textTransform: 'uppercase',
-  },
-  heroText: { fontSize: 15, color: Colors.ink, marginTop: 4, lineHeight: 21 },
+  heroSchwa:  { fontSize: 80, color: Colors.coral, lineHeight: 90, letterSpacing: -3 },
+  heroLabel:  { fontSize: 11, fontWeight: '700', letterSpacing: 1, color: Colors.inkMute, textTransform: 'uppercase' },
+  heroText:   { fontSize: 15, color: Colors.ink, marginTop: 4, lineHeight: 21 },
   wordCard: {
     backgroundColor: 'transparent', borderWidth: 0.5, borderColor: Colors.line,
     borderRadius: 14, padding: 12, marginBottom: 8,
   },
   wordCardActive: { backgroundColor: Colors.paper, borderColor: Colors.coral },
-  wordRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  wordRow:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   wordLetter: { fontSize: 22, fontWeight: '500', color: Colors.ink },
   schwaLetter: {
     color: Colors.coral, fontWeight: '700',
     textDecorationLine: 'underline', textDecorationColor: Colors.coral,
   },
-  wordRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  ipaText: { fontSize: 13, color: Colors.inkMute, fontFamily: 'monospace' },
+  wordRight:  { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  ipaText:    { fontSize: 13, color: Colors.inkMute, fontFamily: 'monospace' },
   playBtn: {
     width: 32, height: 32, borderRadius: 16,
     backgroundColor: Colors.coralSoft, alignItems: 'center', justifyContent: 'center',
@@ -365,47 +360,38 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.paper, borderRadius: Radius.lg,
     borderWidth: 0.5, borderColor: Colors.line, padding: 18,
   },
-  explainerLabel: {
-    fontSize: 11, fontWeight: '700', letterSpacing: 1,
-    textTransform: 'uppercase', marginBottom: 6,
-  },
-  explainerText: { fontSize: 15, color: Colors.ink, lineHeight: 22 },
+  explainerLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 6 },
+  explainerText:  { fontSize: 15, color: Colors.ink, lineHeight: 22 },
   reductionCard: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: Colors.paper, borderWidth: 0.5, borderColor: Colors.line,
     borderRadius: 14, padding: 14,
   },
-  reductionFull: { fontSize: 13, color: Colors.inkMute, marginBottom: 4 },
-  reductionReduced: { fontSize: 24, fontWeight: '600', letterSpacing: -0.3 },
-  reductionRight: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  reductionPhon: { fontSize: 12, color: Colors.inkMute, fontFamily: 'monospace' },
-  reductionPlayBtn: {
-    width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center',
-  },
+  reductionFull:     { fontSize: 13, color: Colors.inkMute, marginBottom: 4 },
+  reductionReduced:  { fontSize: 24, fontWeight: '600', letterSpacing: -0.3 },
+  reductionRight:    { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  reductionPhon:     { fontSize: 12, color: Colors.inkMute, fontFamily: 'monospace' },
+  reductionPlayBtn:  { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
 
   // Connected Speech
   csCard: {
     backgroundColor: Colors.paper, borderWidth: 0.5, borderColor: Colors.line,
-    borderRadius: Radius.md, padding: 16, borderLeftWidth: 3,
-    position: 'relative',
+    borderRadius: Radius.md, padding: 16, borderLeftWidth: 3, position: 'relative',
   },
   csBadge: {
     alignSelf: 'flex-start', borderRadius: Radius.full,
     paddingHorizontal: 8, paddingVertical: 3, marginBottom: 10,
   },
-  csBadgeText: { fontSize: 9, fontWeight: '700', letterSpacing: 1 },
-  csTransform: { flexDirection: 'row', alignItems: 'baseline', gap: 10, marginBottom: 4 },
-  csFull: { fontSize: 17, fontWeight: '500', color: Colors.inkSoft },
-  csArrow: { fontSize: 14, color: Colors.inkMute },
-  csConnected: { fontSize: 22, fontWeight: '700', letterSpacing: -0.3 },
-  csPhon: { fontSize: 12, color: Colors.inkMute, fontFamily: 'monospace', marginBottom: 10 },
-  csDivider: { height: 0.5, backgroundColor: Colors.line, marginBottom: 10 },
-  csExample: {
-    fontSize: 14, color: Colors.inkSoft, fontStyle: 'italic',
-    lineHeight: 20, marginBottom: 10,
-  },
-  csTipBox: { borderRadius: 10, padding: 10, marginBottom: 4 },
-  csTip: { fontSize: 12.5, lineHeight: 18, fontWeight: '500' },
+  csBadgeText:  { fontSize: 9, fontWeight: '700', letterSpacing: 1 },
+  csTransform:  { flexDirection: 'row', alignItems: 'baseline', gap: 10, marginBottom: 4 },
+  csFull:       { fontSize: 17, fontWeight: '500', color: Colors.inkSoft },
+  csArrow:      { fontSize: 14, color: Colors.inkMute },
+  csConnected:  { fontSize: 22, fontWeight: '700', letterSpacing: -0.3 },
+  csPhon:       { fontSize: 12, color: Colors.inkMute, fontFamily: 'monospace', marginBottom: 10 },
+  csDivider:    { height: 0.5, backgroundColor: Colors.line, marginBottom: 10 },
+  csExample:    { fontSize: 14, color: Colors.inkSoft, fontStyle: 'italic', lineHeight: 20, marginBottom: 10 },
+  csTipBox:     { borderRadius: 10, padding: 10, marginBottom: 4 },
+  csTip:        { fontSize: 12.5, lineHeight: 18, fontWeight: '500' },
   csPlayBtn: {
     position: 'absolute', top: 14, right: 14,
     width: 30, height: 30, borderRadius: 15,
