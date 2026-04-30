@@ -1,14 +1,19 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useMemo } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet, PanResponder, Animated, Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import * as Speech from 'expo-speech';
 import { Colors, Radius, Spacing } from '../theme';
 import { Icons } from '../components';
-import { SCHWA_WORDS, REDUCTIONS, CONNECTED_SPEECH, ConnectedSpeechPhenomenon } from '../data/seed';
+import {
+  SCHWA_WORDS, REDUCTIONS, CONNECTED_SPEECH, ConnectedSpeechPhenomenon,
+} from '../data/seed';
+import { useProfileStore, useVaultStore } from '../store';
 
 type Tab = 'schwa' | 'reduce' | 'link' | 'assim' | 'elision';
+type Tier = 'basic' | 'intermediate' | 'advanced';
 
 const TABS: { id: Tab; label: string; mono?: string; color: string; soft: string }[] = [
   { id: 'schwa',   label: 'Schwa',      mono: '/ə/', color: Colors.coral,  soft: Colors.coralSoft },
@@ -16,6 +21,12 @@ const TABS: { id: Tab; label: string; mono?: string; color: string; soft: string
   { id: 'link',    label: 'Linking',                color: Colors.purple, soft: Colors.purpleSoft },
   { id: 'assim',   label: 'Assimilação',            color: Colors.amber,  soft: Colors.amberSoft },
   { id: 'elision', label: 'Elision',                color: Colors.moss,   soft: Colors.mossSoft },
+];
+
+const TIERS: { id: Tier; label: string }[] = [
+  { id: 'basic', label: 'Básico' },
+  { id: 'intermediate', label: 'Intermediário' },
+  { id: 'advanced', label: 'Avançado' },
 ];
 
 const PHENOMENON_META: Record<ConnectedSpeechPhenomenon, { title: string; description: string; color: string; soft: string }> = {
@@ -47,22 +58,102 @@ const SCHWA_LETTER_MAP: Record<string, number[]> = {
   problem: [5],
   family: [3],
   comfortable: [4, 8],
+  for: [0],
+  of: [0],
+  to: [0],
+  a: [0],
+  the: [0],
+  some: [0],
+  than: [0],
+  information: [1, 3],
+  pronunciation: [0, 4],
+  dictionary: [1],
+  extraordinary: [0],
+  responsibility: [1, 3],
+  vegetable: [1, 2],
 };
 
 const SW = Dimensions.get('window').width;
 
 export default function PronunciationScreen() {
-  const navigation   = useNavigation();
+  const navigation   = useNavigation<any>();
+  const { markConnectedSpeechVisited } = useProfileStore();
+  const vaultItems   = useVaultStore((s) => s.items);
   const [tabIndex, setTabIndex] = useState(0);
+  const [tier, setTier] = useState<Tier>('basic');
+  React.useEffect(() => { markConnectedSpeechVisited(); }, []);
   const [activeSchwa, setActiveSchwa] = useState(0);
   const tabBarRef    = useRef<ScrollView>(null);
   const tabIndexRef  = useRef(0);
   const pagerX       = useRef(new Animated.Value(0)).current;
   const snapRef      = useRef<(i: number) => void>(() => {});
 
-  const linkItems    = CONNECTED_SPEECH.filter((c) => c.phenomenon === 'linking' || c.phenomenon === 'intrusion');
-  const assimItems   = CONNECTED_SPEECH.filter((c) => c.phenomenon === 'assimilation');
-  const elisionItems = CONNECTED_SPEECH.filter((c) => c.phenomenon === 'elision');
+  // Tier-filtered data
+  const schwaByTier = useMemo(() =>
+    SCHWA_WORDS.filter((w) => w.tier === tier),
+  [tier]);
+
+  const reductionsByTier = useMemo(() =>
+    REDUCTIONS.filter((r) => r.tier === tier),
+  [tier]);
+
+  const connectedByTier = useMemo(() =>
+    CONNECTED_SPEECH.filter((c) => c.tier === tier),
+  [tier]);
+
+  // Vault bridge — items with type 'reduction' or 'phonetic' not already in seed
+  const vaultReductions = useMemo(() =>
+    vaultItems.filter((v) => v.type === 'reduction').map((v) => ({
+      full: v.term,
+      reduced: v.term,
+      phon: '',
+      tier: 'intermediate' as Tier,
+    })),
+  [vaultItems]);
+
+  const vaultPhonetics = useMemo(() =>
+    vaultItems.filter((v) => v.type === 'phonetic').map((v) => ({
+      word: v.term,
+      ipa: '',
+      schwas: [] as number[],
+      tier: 'intermediate' as Tier,
+    })),
+  [vaultItems]);
+
+  // Counts per tier for current tab
+  const currentTabId = TABS[tabIndex].id;
+
+  const tierCounts: Record<Tier, number> = useMemo(() => {
+    switch (currentTabId) {
+      case 'schwa':
+        return {
+          basic: SCHWA_WORDS.filter((w) => w.tier === 'basic').length,
+          intermediate: SCHWA_WORDS.filter((w) => w.tier === 'intermediate').length,
+          advanced: SCHWA_WORDS.filter((w) => w.tier === 'advanced').length,
+        };
+      case 'reduce':
+        return {
+          basic: REDUCTIONS.filter((r) => r.tier === 'basic').length,
+          intermediate: REDUCTIONS.filter((r) => r.tier === 'intermediate').length,
+          advanced: REDUCTIONS.filter((r) => r.tier === 'advanced').length,
+        };
+      default: {
+        const isLinkOrAssim = currentTabId === 'link' || currentTabId === 'assim';
+        const phenomena = currentTabId === 'link' ? ['linking', 'intrusion']
+          : currentTabId === 'assim' ? ['assimilation']
+          : ['elision'];
+        return {
+          basic: CONNECTED_SPEECH.filter((c) => phenomena.includes(c.phenomenon) && c.tier === 'basic').length,
+          intermediate: CONNECTED_SPEECH.filter((c) => phenomena.includes(c.phenomenon) && c.tier === 'intermediate').length,
+          advanced: CONNECTED_SPEECH.filter((c) => phenomena.includes(c.phenomenon) && c.tier === 'advanced').length,
+        };
+      }
+    }
+  }, [currentTabId]);
+
+  const linkItems    = connectedByTier.filter((c) => c.phenomenon === 'linking' || c.phenomenon === 'intrusion');
+  const assimItems   = connectedByTier.filter((c) => c.phenomenon === 'assimilation');
+  const elisionItems = connectedByTier.filter((c) => c.phenomenon === 'elision');
 
   const snapToTab = (index: number) => {
     tabIndexRef.current = index;
@@ -100,6 +191,8 @@ export default function PronunciationScreen() {
       onPanResponderTerminate: () => { snapRef.current(tabIndexRef.current); },
     })
   ).current;
+
+  const currentTab = TABS[tabIndex].id;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -140,7 +233,31 @@ export default function PronunciationScreen() {
         })}
       </ScrollView>
 
-      {/* Pager — all tabs mounted side by side, follow finger in real time */}
+      {/* Tier selector */}
+      <View style={styles.tierRow}>
+        {TIERS.map((t) => {
+          const active = tier === t.id;
+          const tabColor = TABS[tabIndex]?.color ?? Colors.ink;
+          const count = tierCounts[t.id];
+          return (
+            <TouchableOpacity
+              key={t.id}
+              onPress={() => setTier(t.id)}
+              style={[styles.tierChip, active && { backgroundColor: tabColor, borderColor: tabColor }]}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.tierText, active && { color: Colors.sand }]}>{t.label}</Text>
+              {count > 0 && (
+                <View style={[styles.tierCountBadge, { backgroundColor: active ? 'rgba(255,255,255,0.25)' : Colors.line }]}>
+                  <Text style={[styles.tierCountText, { color: active ? Colors.sand : Colors.inkMute }]}>{count}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      {/* Pager */}
       <View style={{ flex: 1, overflow: 'hidden' }} {...swipePan.panHandlers}>
         <Animated.View style={{ flexDirection: 'row', width: SW * TABS.length, flex: 1, transform: [{ translateX: pagerX }] }}>
 
@@ -159,7 +276,7 @@ export default function PronunciationScreen() {
             </View>
             <View style={{ paddingHorizontal: Spacing.lg }}>
               <Text style={styles.sectionTitle}>Encontre o schwa</Text>
-              {SCHWA_WORDS.map((w, i) => {
+              {schwaByTier.map((w, i) => {
                 const isOpen = activeSchwa === i;
                 const letters = w.word.split('');
                 const schwaIdxs = SCHWA_LETTER_MAP[w.word] || [];
@@ -180,7 +297,7 @@ export default function PronunciationScreen() {
                       </View>
                       <View style={styles.wordRight}>
                         <Text style={styles.ipaText}>{w.ipa}</Text>
-                        <TouchableOpacity style={styles.playBtn} activeOpacity={0.7}>
+                        <TouchableOpacity style={styles.playBtn} onPress={() => Speech.speak(w.word, { language: 'en-US' })} activeOpacity={0.7}>
                           <Icons.Play size={14} color={Colors.coral} />
                         </TouchableOpacity>
                       </View>
@@ -188,6 +305,29 @@ export default function PronunciationScreen() {
                   </TouchableOpacity>
                 );
               })}
+              {schwaByTier.length === 0 && (
+                <Text style={{ fontSize: 13, color: Colors.inkMute, textAlign: 'center', marginTop: 20 }}>
+                  Nenhum exemplo neste nível.
+                </Text>
+              )}
+
+              {/* Vault bridge — phonetic items */}
+              {vaultPhonetics.length > 0 && (
+                <View style={{ marginTop: 20 }}>
+                  <Text style={styles.vaultBridgeTitle}>DO SEU VAULT</Text>
+                  {vaultPhonetics.map((vp, i) => (
+                    <View key={i} style={[styles.wordCard, { borderLeftWidth: 3, borderLeftColor: Colors.moss }]}>
+                      <View style={styles.wordRow}>
+                        <Text style={[styles.wordLetter, { fontSize: 18 }]}>{vp.word}</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <View style={styles.vaultDot} />
+                          <Text style={{ fontSize: 11, color: Colors.moss, fontWeight: '600' }}>Vault</Text>
+                        </View>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              )}
             </View>
           </ScrollView>
 
@@ -202,7 +342,7 @@ export default function PronunciationScreen() {
               </View>
             </View>
             <View style={{ paddingHorizontal: Spacing.lg, gap: 8 }}>
-              {REDUCTIONS.map((r, i) => (
+              {reductionsByTier.map((r, i) => (
                 <View key={i} style={styles.reductionCard}>
                   <View style={{ flex: 1 }}>
                     <Text style={styles.reductionFull}>{r.full}</Text>
@@ -210,28 +350,76 @@ export default function PronunciationScreen() {
                   </View>
                   <View style={styles.reductionRight}>
                     <Text style={styles.reductionPhon}>{r.phon}</Text>
-                    <TouchableOpacity style={[styles.reductionPlayBtn, { backgroundColor: Colors.ocean }]} activeOpacity={0.7}>
+                    <TouchableOpacity style={[styles.reductionPlayBtn, { backgroundColor: Colors.ocean }]} onPress={() => Speech.speak(r.full, { language: 'en-US' })} activeOpacity={0.7}>
                       <Icons.Play size={14} color="#fff" />
                     </TouchableOpacity>
                   </View>
                 </View>
               ))}
+              {reductionsByTier.length === 0 && (
+                <Text style={{ fontSize: 13, color: Colors.inkMute, textAlign: 'center', marginTop: 20 }}>
+                  Nenhuma redução neste nível.
+                </Text>
+              )}
+
+              {/* Vault bridge — reduction items */}
+              {vaultReductions.length > 0 && (
+                <View style={{ marginTop: 20 }}>
+                  <Text style={styles.vaultBridgeTitle}>DO SEU VAULT</Text>
+                  {vaultReductions.map((vr, i) => (
+                    <TouchableOpacity
+                      key={i}
+                      style={[styles.reductionCard, { borderLeftWidth: 3, borderLeftColor: Colors.moss }]}
+                      onPress={() => Speech.speak(vr.full, { language: 'en-US' })}
+                      activeOpacity={0.8}
+                    >
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.reductionReduced, { color: Colors.ocean }]}>{vr.full}</Text>
+                      </View>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <View style={styles.vaultDot} />
+                        <Text style={{ fontSize: 11, color: Colors.moss, fontWeight: '600' }}>Vault</Text>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
             </View>
           </ScrollView>
 
           {/* ── Linking + Intrusion ── */}
           <ScrollView style={{ width: SW }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 48 }}>
-            <ConnectedSpeechSection items={linkItems} phenomena={['linking', 'intrusion']} />
+            <ConnectedSpeechSection items={linkItems} phenomena={['linking', 'intrusion']} currentTab={currentTab} />
           </ScrollView>
 
           {/* ── Assimilation ── */}
           <ScrollView style={{ width: SW }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 48 }}>
-            <ConnectedSpeechSection items={assimItems} phenomena={['assimilation']} />
+            <ConnectedSpeechSection items={assimItems} phenomena={['assimilation']} currentTab={currentTab} />
           </ScrollView>
 
           {/* ── Elision ── */}
           <ScrollView style={{ width: SW }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 48 }}>
-            <ConnectedSpeechSection items={elisionItems} phenomena={['elision']} />
+            <ConnectedSpeechSection items={elisionItems} phenomena={['elision']} currentTab={currentTab} />
+
+            {/* Shadowing entry card */}
+            <View style={{ paddingHorizontal: Spacing.lg, marginTop: 24 }}>
+              <TouchableOpacity
+                onPress={() => navigation.navigate('Shadowing')}
+                style={styles.shadowingCard}
+                activeOpacity={0.85}
+              >
+                <View style={[styles.shadowingIcon, { backgroundColor: Colors.purpleSoft }]}>
+                  <Icons.Wave size={24} color={Colors.purple} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.shadowingTitle}>Shadowing</Text>
+                  <Text style={styles.shadowingSub}>
+                    Pratique a pronúncia repetindo áudios em tempo real. Melhore sua fluência e redução de sotaque.
+                  </Text>
+                </View>
+                <Icons.Next size={18} color={Colors.purple} />
+              </TouchableOpacity>
+            </View>
           </ScrollView>
 
         </Animated.View>
@@ -244,9 +432,11 @@ export default function PronunciationScreen() {
 function ConnectedSpeechSection({
   items,
   phenomena,
+  currentTab,
 }: {
   items: typeof CONNECTED_SPEECH;
   phenomena: ConnectedSpeechPhenomenon[];
+  currentTab: string;
 }) {
   return (
     <>
@@ -285,12 +475,17 @@ function ConnectedSpeechSection({
               <View style={[styles.csTipBox, { backgroundColor: meta.soft }]}>
                 <Text style={[styles.csTip, { color: meta.color }]}>💡 {item.tip}</Text>
               </View>
-              <TouchableOpacity style={[styles.csPlayBtn, { backgroundColor: meta.color }]} activeOpacity={0.8}>
+              <TouchableOpacity style={[styles.csPlayBtn, { backgroundColor: meta.color }]} onPress={() => Speech.speak(item.example, { language: 'en-US' })} activeOpacity={0.8}>
                 <Icons.Play size={13} color="#fff" />
               </TouchableOpacity>
             </View>
           );
         })}
+        {items.length === 0 && (
+          <Text style={{ fontSize: 13, color: Colors.inkMute, textAlign: 'center', marginTop: 20 }}>
+            Nenhum exemplo neste nível.
+          </Text>
+        )}
       </View>
     </>
   );
@@ -314,7 +509,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: 20, fontWeight: '700', color: Colors.ink, letterSpacing: -0.3 },
 
-  tabScroll: { paddingHorizontal: Spacing.lg, paddingBottom: 14, gap: 6, flexDirection: 'row' },
+  tabScroll: { paddingHorizontal: Spacing.lg, paddingBottom: 8, gap: 6, flexDirection: 'row' },
   tab: {
     height: 36, flexDirection: 'row', alignItems: 'center', gap: 5,
     paddingHorizontal: 14, borderRadius: 12,
@@ -322,6 +517,23 @@ const styles = StyleSheet.create({
   },
   tabMono:  { fontSize: 16, fontWeight: '700', fontFamily: 'monospace', color: Colors.ink },
   tabLabel: { fontSize: 13, fontWeight: '600', color: Colors.ink },
+
+  tierRow: {
+    flexDirection: 'row', gap: 6,
+    paddingHorizontal: Spacing.lg, paddingBottom: 12,
+  },
+  tierChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: 14, paddingVertical: 6,
+    borderRadius: Radius.full, borderWidth: 1,
+    borderColor: Colors.lineStrong, backgroundColor: Colors.paper,
+  },
+  tierText: { fontSize: 12, fontWeight: '600', color: Colors.inkSoft },
+  tierCountBadge: {
+    paddingHorizontal: 6, paddingVertical: 1,
+    borderRadius: 8,
+  },
+  tierCountText: { fontSize: 10, fontWeight: '700' },
 
   sectionTitle: {
     fontSize: 12, fontWeight: '700', letterSpacing: 0.8,
@@ -353,6 +565,15 @@ const styles = StyleSheet.create({
   playBtn: {
     width: 32, height: 32, borderRadius: 16,
     backgroundColor: Colors.coralSoft, alignItems: 'center', justifyContent: 'center',
+  },
+
+  // Vault bridge
+  vaultBridgeTitle: {
+    fontSize: 10, fontWeight: '700', letterSpacing: 1,
+    color: Colors.moss, marginBottom: 8, textTransform: 'uppercase',
+  },
+  vaultDot: {
+    width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.moss,
   },
 
   // Reductions
@@ -397,4 +618,18 @@ const styles = StyleSheet.create({
     width: 30, height: 30, borderRadius: 15,
     alignItems: 'center', justifyContent: 'center',
   },
+
+  // Shadowing
+  shadowingCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 14,
+    backgroundColor: Colors.paper, borderRadius: Radius.md,
+    borderWidth: 1, borderColor: Colors.purple,
+    padding: 16,
+  },
+  shadowingIcon: {
+    width: 48, height: 48, borderRadius: 14,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  shadowingTitle: { fontSize: 15, fontWeight: '700', color: Colors.ink },
+  shadowingSub: { fontSize: 12, color: Colors.inkMute, marginTop: 4, lineHeight: 17 },
 });

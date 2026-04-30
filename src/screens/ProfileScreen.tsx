@@ -1,12 +1,13 @@
 import React, { useMemo } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet,
+  View, Text, ScrollView, TouchableOpacity, StyleSheet, Share,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Colors, Radius, Spacing } from '../theme';
 import { PgCard, PgChip, PgRing, PgRadar, RadarAxis, Icons } from '../components';
 import { useVaultStore, useProfileStore } from '../store';
+import { ZIPF_TOP_500 } from '../data/seed';
 
 const DAY_LABELS = ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'];
 
@@ -42,10 +43,15 @@ export default function ProfileScreen() {
   const totalWords = items.length;
   const matureWords = items.filter((v) => v.srs === 'mature').length;
   const cefrPct = CEFR_MAP[level] ?? 42;
-  const zipfCoverage = Math.min(100, (ZIPF_BASE[level] ?? 50) + Math.round(totalWords / 40));
+  const zipfCovCount = ZIPF_TOP_500.filter((z) => items.some((v) => v.term.toLowerCase() === z.word.toLowerCase())).length;
+  const zipfCoverage = ZIPF_TOP_500.length > 0 ? Math.round((zipfCovCount / ZIPF_TOP_500.length) * 100) : 0;
   const weeklyMinutes = weeklyCards.map((c) => c * 2);
   const maxMin = Math.max(...weeklyMinutes, 1);
   const totalWeekMin = weeklyMinutes.reduce((a, b) => a + b, 0);
+
+  const handleExport = () => {
+    Share.share({ message: JSON.stringify(items, null, 2) });
+  };
 
   const lb = LEVEL_BONUS[level] ?? 48;
   const vocabItems = items.filter((v) => ['word', 'phrase', 'idiom', 'gap-filler', 'chunk'].includes(v.type)).length;
@@ -304,12 +310,24 @@ export default function ProfileScreen() {
               <View style={{ flex: 1 }}>
                 <Text style={styles.zipfLabel}>COBERTURA ZIPF</Text>
                 <Text style={styles.zipfText}>
-                  ~{Math.round(zipfCoverage / 100 * 2000).toLocaleString()} das 2.000 palavras mais frequentes
+                  {zipfCovCount} das {ZIPF_TOP_500.length} palavras mais frequentes
                 </Text>
               </View>
             </View>
           </PgCard>
         </View>
+
+        {/* Export Vault */}
+        {items.length > 0 && (
+          <View style={{ paddingHorizontal: Spacing.lg, paddingTop: 20 }}>
+            <TouchableOpacity style={styles.exportBtn} onPress={handleExport} activeOpacity={0.8}>
+              <View style={{ width: 16, height: 16, alignItems: 'center', justifyContent: 'center' }}>
+                <Text style={{ fontSize: 12, color: Colors.sand, fontWeight: '700' }}>⬆</Text>
+              </View>
+              <Text style={styles.exportText}>Exportar Vault</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -376,4 +394,10 @@ const styles = StyleSheet.create({
     borderRadius: 10, padding: 12,
   },
   dnaAlertText: { fontSize: 12, color: Colors.coral, lineHeight: 18, fontWeight: '500' },
+  exportBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    backgroundColor: Colors.ink, borderRadius: Radius.full,
+    paddingVertical: 14,
+  },
+  exportText: { fontSize: 14, fontWeight: '700', color: Colors.sand },
 });

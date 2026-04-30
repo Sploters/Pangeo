@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -17,10 +17,22 @@ const LEVEL_META: Record<1|2|3, { label: string; color: string; soft: string; ce
   3: { label: 'Level 3', color: Colors.coral, soft: Colors.coralSoft, cefr: 'B2' },
 };
 
+const REAL_META = { label: 'Real', color: '#D4AF37', soft: '#FFF3CD', cefr: 'B2+' };
+
+type SourceMode = 'graded' | 'real';
+
 export default function NewsListScreen() {
   const navigation = useNavigation<Nav>();
   const { items }  = useVaultStore();
+  const [sourceMode, setSourceMode] = useState<SourceMode>('graded');
   const [level, setLevel] = useState<1|2|3|'all'>('all');
+
+  const filteredBySource = useMemo(() => {
+    if (sourceMode === 'graded') {
+      return NEWS_ARTICLES.filter((a) => a.level !== 4);
+    }
+    return NEWS_ARTICLES.filter((a) => a.level === 4);
+  }, [sourceMode]);
 
   const allCaptured = (article: NewsArticle) =>
     article.vocabulary.every((v) =>
@@ -28,8 +40,11 @@ export default function NewsListScreen() {
     );
 
   const visible = level === 'all'
-    ? NEWS_ARTICLES
-    : NEWS_ARTICLES.filter((a) => a.level === level);
+    ? filteredBySource
+    : filteredBySource.filter((a) => a.level === level);
+
+  const totalArticles = filteredBySource.length;
+  const allDone = totalArticles > 0 && filteredBySource.every(allCaptured);
 
   return (
     <SafeAreaView style={s.safe}>
@@ -39,64 +54,129 @@ export default function NewsListScreen() {
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={s.headerSub}>NOTÍCIAS EM INGLÊS</Text>
-          <Text style={s.headerTitle}>News in Levels</Text>
+          <Text style={s.headerTitle}>
+            {sourceMode === 'graded' ? 'News in Levels' : 'Real News'}
+          </Text>
         </View>
+      </View>
+
+      {/* Source toggle */}
+      <View style={s.sourceToggle}>
+        <TouchableOpacity
+          onPress={() => { setSourceMode('graded'); setLevel('all'); }}
+          style={[s.sourceChip, sourceMode === 'graded' && s.sourceChipActive]}
+          activeOpacity={0.8}
+        >
+          <Text style={[s.sourceText, sourceMode === 'graded' && s.sourceTextActive]}>
+            News in Levels
+          </Text>
+          <Text style={[s.sourceSubtext, sourceMode === 'graded' && s.sourceSubtextActive]}>
+            Iniciante → Intermediário
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => { setSourceMode('real'); setLevel('all'); }}
+          style={[s.sourceChip, sourceMode === 'real' && s.sourceChipReal]}
+          activeOpacity={0.8}
+        >
+          <Text style={[s.sourceText, sourceMode === 'real' && s.sourceTextActive]}>
+            Real News
+          </Text>
+          <Text style={[s.sourceSubtext, sourceMode === 'real' && s.sourceSubtextActive]}>
+            Autêntico B2+
+          </Text>
+        </TouchableOpacity>
       </View>
 
       {/* Level filter */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.filterScroll}>
-        {(['all', 1, 2, 3] as const).map((l) => {
-          const active = level === l;
-          const meta   = l === 'all' ? null : LEVEL_META[l];
-          return (
-            <TouchableOpacity
-              key={String(l)}
-              onPress={() => setLevel(l)}
-              style={[s.pill, active && { backgroundColor: meta?.color ?? Colors.ink, borderColor: meta?.color ?? Colors.ink }]}
-              activeOpacity={0.8}
-            >
-              <Text style={[s.pillText, active && { color: Colors.sand }]}>
-                {l === 'all' ? 'Todos' : `${meta!.label} · ${meta!.cefr}`}
+        {sourceMode === 'graded' ? (
+          (['all', 1, 2, 3] as const).map((l) => {
+            const active = level === l;
+            const meta   = l === 'all' ? null : LEVEL_META[l];
+            return (
+              <TouchableOpacity
+                key={String(l)}
+                onPress={() => setLevel(l)}
+                style={[s.pill, active && { backgroundColor: meta?.color ?? Colors.ink, borderColor: meta?.color ?? Colors.ink }]}
+                activeOpacity={0.8}
+              >
+                <Text style={[s.pillText, active && { color: Colors.sand }]}>
+                  {l === 'all' ? 'Todos' : `${meta!.label} · ${meta!.cefr}`}
+                </Text>
+              </TouchableOpacity>
+            );
+          })
+        ) : (
+          <View style={{ flexDirection: 'row', gap: 6 }}>
+            <View style={[s.pill, { backgroundColor: REAL_META.color, borderColor: REAL_META.color }]}>
+              <Text style={[s.pillText, { color: Colors.sand }]}>
+                {totalArticles} artigos autênticos
               </Text>
-            </TouchableOpacity>
-          );
-        })}
+            </View>
+            {allDone && (
+              <View style={[s.pill, { backgroundColor: Colors.mossDeep + 'AA', borderColor: 'transparent' }]}>
+                <Text style={[s.pillText, { color: Colors.sand }]}>✓ Todos capturados</Text>
+              </View>
+            )}
+          </View>
+        )}
       </ScrollView>
 
       <ScrollView contentContainerStyle={{ paddingHorizontal: Spacing.lg, paddingBottom: 32, gap: 10 }}>
-        {visible.map((article) => {
-          const meta      = LEVEL_META[article.level];
-          const captured  = allCaptured(article);
-          const remaining = article.vocabulary.filter(
-            (v) => !items.some((i) => i.term.toLowerCase() === v.term.toLowerCase()),
-          ).length;
-          return (
-            <TouchableOpacity
-              key={article.id}
-              style={s.card}
-              onPress={() => navigation.navigate('NewsArticle', { articleId: article.id })}
-              activeOpacity={0.85}
-            >
-              <View style={s.cardTop}>
-                <View style={[s.levelBadge, { backgroundColor: meta.soft }]}>
-                  <Text style={[s.levelText, { color: meta.color }]}>{meta.label} · {meta.cefr}</Text>
-                </View>
-                {captured && (
-                  <View style={s.capturedBadge}>
-                    <Text style={s.capturedText}>✓ Capturado</Text>
+        {visible.length === 0 ? (
+          <View style={{ padding: 40, alignItems: 'center' }}>
+            <Text style={{ fontSize: 14, color: Colors.inkMute, textAlign: 'center' }}>
+              Nenhum artigo encontrado neste nível.
+            </Text>
+          </View>
+        ) : (
+          visible.map((article) => {
+            const isReal = article.level === 4;
+            const meta   = isReal ? REAL_META : LEVEL_META[article.level as 1|2|3];
+            const color  = isReal ? '#D4AF37' : meta.color;
+            const soft   = isReal ? '#FFF3CD' : meta.soft;
+            const captured  = allCaptured(article);
+            const remaining = article.vocabulary.filter(
+              (v) => !items.some((i) => i.term.toLowerCase() === v.term.toLowerCase()),
+            ).length;
+            return (
+              <TouchableOpacity
+                key={article.id}
+                style={s.card}
+                onPress={() => navigation.navigate('NewsArticle', { articleId: article.id })}
+                activeOpacity={0.85}
+              >
+                <View style={s.cardTop}>
+                  <View style={[s.levelBadge, { backgroundColor: soft }]}>
+                    <Text style={[s.levelText, { color }]}>
+                      {isReal ? `${article.source ?? 'Real'} · B2+` : `${meta.label} · ${meta.cefr}`}
+                    </Text>
                   </View>
-                )}
-              </View>
-              <Text style={s.cardTitle}>{article.title}</Text>
-              <View style={s.cardFooter}>
-                <Text style={s.cardTopic}>{article.topic}</Text>
-                <Text style={s.cardVocab}>
-                  {captured ? 'Vocabulário capturado' : `${remaining} palavras para capturar`}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          );
-        })}
+                  {captured && (
+                    <View style={s.capturedBadge}>
+                      <Text style={s.capturedText}>✓ Capturado</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={s.cardTitle}>{article.title}</Text>
+                <View style={s.cardFooter}>
+                  <Text style={s.cardTopic}>{article.topic}</Text>
+                  {!isReal && (
+                    <Text style={s.cardVocab}>
+                      {captured ? 'Vocabulário capturado' : `${remaining} palavras para capturar`}
+                    </Text>
+                  )}
+                  {isReal && (
+                    <Text style={s.cardVocab}>
+                      {captured ? 'Vocabulário capturado' : `${remaining} para capturar`}
+                    </Text>
+                  )}
+                </View>
+              </TouchableOpacity>
+            );
+          })
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -108,6 +188,25 @@ const s = StyleSheet.create({
   backBtn:       { width: 38, height: 38, borderRadius: Radius.full, backgroundColor: Colors.paper, borderWidth: 0.5, borderColor: Colors.line, alignItems: 'center', justifyContent: 'center' },
   headerSub:     { fontSize: 10, fontWeight: '700', letterSpacing: 1, color: Colors.inkMute, textTransform: 'uppercase', marginBottom: 2 },
   headerTitle:   { fontSize: 20, fontWeight: '700', color: Colors.ink, letterSpacing: -0.3 },
+  sourceToggle: {
+    flexDirection: 'row', gap: 8, paddingHorizontal: Spacing.lg,
+    paddingBottom: 12,
+  },
+  sourceChip: {
+    flex: 1, paddingVertical: 10, paddingHorizontal: 14,
+    borderRadius: Radius.md, borderWidth: 1, borderColor: Colors.line,
+    backgroundColor: Colors.paper,
+  },
+  sourceChipActive: {
+    borderColor: Colors.moss, backgroundColor: Colors.mossSoft,
+  },
+  sourceChipReal: {
+    borderColor: '#D4AF37', backgroundColor: '#FFF3CD',
+  },
+  sourceText: { fontSize: 13, fontWeight: '700', color: Colors.inkMute },
+  sourceTextActive: { color: Colors.mossDeep },
+  sourceSubtext: { fontSize: 10, color: Colors.inkMute, marginTop: 2 },
+  sourceSubtextActive: { color: Colors.inkSoft },
   filterScroll:  { paddingHorizontal: Spacing.lg, gap: 6, paddingBottom: 14 },
   pill:          { paddingHorizontal: 12, paddingVertical: 6, borderRadius: Radius.full, borderWidth: 1, borderColor: Colors.lineStrong },
   pillText:      { fontSize: 12, fontWeight: '600', color: Colors.inkSoft },

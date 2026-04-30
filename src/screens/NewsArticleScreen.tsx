@@ -12,10 +12,11 @@ import { useVaultStore } from '../store';
 type Nav   = NativeStackNavigationProp<RootStackParamList>;
 type Route = RouteProp<RootStackParamList, 'NewsArticle'>;
 
-const LEVEL_META: Record<1|2|3, { color: string; soft: string; label: string }> = {
+const LEVEL_META: Record<1|2|3|4, { color: string; soft: string; label: string }> = {
   1: { color: Colors.moss,  soft: Colors.mossSoft,  label: 'Level 1 · A2' },
   2: { color: Colors.ocean, soft: Colors.oceanSoft, label: 'Level 2 · B1' },
   3: { color: Colors.coral, soft: Colors.coralSoft, label: 'Level 3 · B2' },
+  4: { color: '#D4AF37',    soft: '#FFF3CD',        label: 'Real News · B2+' },
 };
 
 export default function NewsArticleScreen() {
@@ -83,14 +84,19 @@ export default function NewsArticleScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} style={s.backBtn} activeOpacity={0.7}>
           <Icons.Back size={20} color={Colors.ink} />
         </TouchableOpacity>
-        <View style={[s.levelBadge, { backgroundColor: meta.soft }]}>
-          <Text style={[s.levelText, { color: meta.color }]}>{meta.label}</Text>
+          <View style={[s.levelBadge, { backgroundColor: meta.soft }]}>
+            <Text style={[s.levelText, { color: meta.color }]}>{meta.label}</Text>
+          </View>
+          {article.source && (
+            <View style={[s.levelBadge, { backgroundColor: Colors.mossSoft }]}>
+              <Text style={[s.levelText, { color: Colors.moss }]}>{article.source}</Text>
+            </View>
+          )}
         </View>
-      </View>
 
-      <ScrollView contentContainerStyle={s.content}>
-        <Text style={s.title}>{article.title}</Text>
-        <Text style={s.date}>{article.date}</Text>
+        <ScrollView contentContainerStyle={s.content}>
+          <Text style={s.title}>{article.title}</Text>
+          <Text style={s.date}>{article.date}</Text>
 
         {/* Article text with vocab highlights */}
         <View style={s.textBlock}>

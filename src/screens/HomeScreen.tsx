@@ -29,7 +29,7 @@ function typeColor(type: string) {
 export default function HomeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const items = useVaultStore((s) => s.items);
-  const { name, streak, dailyGoal, todayReviewed } = useProfileStore();
+  const { name, streak, dailyGoal, todayReviewed, visitedConnectedSpeech } = useProfileStore();
 
   const missionPct = Math.min(1, dailyGoal > 0 ? todayReviewed / dailyGoal : 0);
   const missionDone = todayReviewed >= dailyGoal;
@@ -57,6 +57,18 @@ export default function HomeScreen() {
 
   const reviewableCount = items.filter((v) => v.srs !== 'mature' && v.gloss.trim()).length;
   const displayName = name || 'Você';
+
+  // Word of the Day
+  const wordOfDay = useMemo(() => {
+    const unvaultedTop = ZIPF_TOP_500
+      .filter((z) => !inVault(z.word))
+      .slice(0, 20);
+    if (unvaultedTop.length === 0) return null;
+    const year = new Date().getFullYear();
+    const dayOfYear = Math.floor((Date.now() - new Date(year, 0, 0).getTime()) / 86_400_000);
+    const idx = dayOfYear % unvaultedTop.length;
+    return unvaultedTop[idx];
+  }, [items]);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -161,6 +173,51 @@ export default function HomeScreen() {
           </View>
         </View>
 
+        {/* Word of the Day */}
+        {wordOfDay && (
+          <View style={{ paddingHorizontal: Spacing.lg, marginTop: 12 }}>
+            <View style={{
+              backgroundColor: Colors.coralSoft, borderRadius: Radius.md,
+              borderWidth: 1, borderColor: Colors.coral,
+              padding: 14,
+            }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                <Text style={{ fontSize: 20 }}>📖</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 10, fontWeight: '700', letterSpacing: 1, color: Colors.coral, textTransform: 'uppercase' }}>
+                    Palavra do Dia
+                  </Text>
+                  <Text style={{ fontSize: 12, color: Colors.inkMute, marginTop: 1 }}>
+                    Zipf #{wordOfDay.rank} — {wordOfDay.type}
+                  </Text>
+                </View>
+              </View>
+              <Text style={{ fontSize: 24, fontWeight: '700', color: Colors.ink, letterSpacing: -0.5 }}>
+                {wordOfDay.word}
+              </Text>
+              <Text style={{ fontSize: 13, color: Colors.inkSoft, marginTop: 4 }}>
+                {wordOfDay.gloss}
+              </Text>
+              <Text style={{ fontSize: 13, color: Colors.inkMute, fontStyle: 'italic', marginTop: 8, lineHeight: 18 }}>
+                "{wordOfDay.example}"
+              </Text>
+              <TouchableOpacity
+                onPress={() => navigation.navigate('Capture', { itemId: undefined })}
+                style={{
+                  flexDirection: 'row', alignItems: 'center', gap: 6,
+                  backgroundColor: Colors.coral, borderRadius: Radius.full,
+                  paddingHorizontal: 16, paddingVertical: 10,
+                  alignSelf: 'flex-start', marginTop: 12,
+                }}
+                activeOpacity={0.85}
+              >
+                <Icons.Plus size={14} color={Colors.sand} />
+                <Text style={{ fontSize: 13, fontWeight: '700', color: Colors.sand }}>Capturar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
         {/* Quick actions */}
         <View style={styles.quickRow}>
           <TouchableOpacity
@@ -193,9 +250,11 @@ export default function HomeScreen() {
               <View style={[styles.iconBox, { backgroundColor: Colors.oceanSoft }]}>
                 <Icons.Wave size={18} color={Colors.ocean} />
               </View>
-              <View style={styles.newBadge}>
-                <Text style={styles.newBadgeText}>Novo</Text>
-              </View>
+              {!visitedConnectedSpeech && (
+                <View style={styles.newBadge}>
+                  <Text style={styles.newBadgeText}>Novo</Text>
+                </View>
+              )}
             </View>
             <Text style={styles.quickLabel}>Connected Speech</Text>
             <Text style={styles.quickSub}>Schwa · reduções · linking · elisão</Text>

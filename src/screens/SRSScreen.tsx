@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, Animated, ScrollView, TextInput, Linking,
+  View, Text, TouchableOpacity, StyleSheet, Animated, ScrollView, TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -9,6 +9,9 @@ import { PgButton, PgChip, Icons } from '../components';
 import { useVaultStore, useProfileStore, StudyIntensity } from '../store';
 import { initFSRS, reviewFSRS, previewIntervals } from '../utils/fsrs';
 import { VaultItem, GRAMMAR_TOPICS, GrammarTopic } from '../data/seed';
+import { RootStackParamList } from '../navigation';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import * as Speech from 'expo-speech';
 
 function latencyLabel(ms: number): { text: string; color: string } {
   if (ms < 2000) return { text: 'RÁPIDO', color: Colors.moss };
@@ -37,9 +40,11 @@ function buildCloze(example: string, term: string): string | null {
   return re.test(example) ? example.replace(re, '___') : null;
 }
 
+type Nav = NativeStackNavigationProp<RootStackParamList>;
+
 export default function SRSScreen() {
-  const navigation = useNavigation();
-  const { items, updateSRS } = useVaultStore();
+  const navigation = useNavigation<Nav>();
+  const { items, updateSRS, toggleBookmark } = useVaultStore();
   const { trackStudySession, recordLatency, avgLatencyMs, studyIntensity, setStudyIntensity, clozeEnabled, setClozeEnabled, level } = useProfileStore();
 
   const [phase, setPhase] = useState<'pick' | 'session'>('pick');
@@ -406,6 +411,13 @@ export default function SRSScreen() {
                   </View>
                 );
               })()}
+              <TouchableOpacity
+                onPress={() => Speech.speak(card.example || card.term, { language: 'en-US' })}
+                style={{ position: 'absolute', top: 14, left: 14 }}
+                activeOpacity={0.7}
+              >
+                <Icons.Play size={18} color={Colors.sand} />
+              </TouchableOpacity>
               <View style={{ flex: 1, justifyContent: 'center' }}>
                 <Text style={styles.backEye}>{card.term.toUpperCase()}</Text>
                 <Text style={styles.backMeaning}>{card.gloss}</Text>
@@ -442,8 +454,13 @@ export default function SRSScreen() {
                   {card.srs === 'due' ? 'PARA HOJE' : card.srs === 'learning' ? 'APRENDENDO' : 'NOVO'}
                 </PgChip>
               </View>
-              <View style={{ position: 'absolute', top: 14, right: 14 }}>
-                <Icons.Bookmark size={18} color={Colors.inkMute} />
+              <View style={{ position: 'absolute', top: 14, right: 14, flexDirection: 'row', gap: 6 }}>
+                <TouchableOpacity onPress={() => Speech.speak(card.term, { language: 'en-US' })} activeOpacity={0.7}>
+                  <Icons.Play size={18} color={Colors.inkMute} />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => toggleBookmark(card.id)} activeOpacity={0.7}>
+                  <Icons.Bookmark size={18} color={card.bookmarked ? Colors.coral : Colors.inkMute} />
+                </TouchableOpacity>
               </View>
               <Text style={styles.cardFrontWord}>{card.term}</Text>
               <Text style={styles.cardType}>{card.type}</Text>
@@ -460,7 +477,7 @@ export default function SRSScreen() {
               <Text style={styles.suggestionText}>{suggestion.title}</Text>
             </View>
             <TouchableOpacity 
-              onPress={() => Linking.openURL(suggestion.url)}
+              onPress={() => navigation.navigate('GrammarDetail', { topicId: suggestion.id })}
               style={styles.suggestionBtn}
             >
               <Text style={styles.suggestionBtnText}>Ver Lição</Text>

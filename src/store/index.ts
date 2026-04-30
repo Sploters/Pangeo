@@ -58,6 +58,7 @@ type VaultStore = {
   updateSRS: (id: number, patch: Partial<VaultItem>) => void;
   updateItem: (id: number, patch: Omit<VaultItem, 'id'>) => void;
   removeItem: (id: number) => void;
+  toggleBookmark: (id: number) => void;
 };
 
 export const useVaultStore = create<VaultStore>()(
@@ -72,10 +73,16 @@ export const useVaultStore = create<VaultStore>()(
         })),
       updateItem: (id, patch) =>
         set((s) => ({
-          items: s.items.map((v) => (v.id === id ? { ...patch, id } : v)),
+          items: s.items.map((v) => (v.id === id ? { ...v, ...patch } : v)),
         })),
       removeItem: (id) =>
         set((s) => ({ items: s.items.filter((v) => v.id !== id) })),
+      toggleBookmark: (id) =>
+        set((s) => ({
+          items: s.items.map((v) =>
+            v.id === id ? { ...v, bookmarked: !v.bookmarked } : v,
+          ),
+        })),
     }),
     { name: 'pangeo-vault-v2', storage: createJSONStorage(() => AsyncStorage) }
   )
@@ -98,9 +105,11 @@ type ProfileStore = {
   clozeEnabled: boolean;
   dailyGoal: number;        // target reviews per day (default 15)
   todayReviewed: number;    // cards reviewed today (resets on new day)
+  visitedConnectedSpeech: boolean;
   setName: (n: string) => void;
   setLevel: (l: string) => void;
   setOnboarded: () => void;
+  markConnectedSpeechVisited: () => void;
   trackStudySession: (cards: number) => void;
   recordLatency: (ms: number) => void;
   setStudyIntensity: (i: StudyIntensity) => void;
@@ -124,9 +133,11 @@ export const useProfileStore = create<ProfileStore>()(
       clozeEnabled: false,
       dailyGoal: 15,
       todayReviewed: 0,
+      visitedConnectedSpeech: false,
       setName: (name) => set({ name }),
       setLevel: (level) => set({ level }),
       setOnboarded: () => set({ onboarded: true }),
+      markConnectedSpeechVisited: () => set({ visitedConnectedSpeech: true }),
       setStudyIntensity: (studyIntensity) => set({ studyIntensity }),
       setClozeEnabled: (clozeEnabled) => set({ clozeEnabled }),
       setDailyGoal: (dailyGoal) => set({ dailyGoal }),

@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet,
+  View, Text, ScrollView, TouchableOpacity, StyleSheet, Modal, Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -9,7 +9,7 @@ import { Colors, Radius, Spacing } from '../theme';
 import { PgChip, Icons } from '../components';
 import { CONTENT, ContentItem, NEWS_ARTICLES } from '../data/seed';
 import { RootStackParamList } from '../navigation';
-import { useVaultStore } from '../store';
+import { useVaultStore, useProfileStore } from '../store';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -27,6 +27,24 @@ type VocabProgress = { captured: number; total: number } | null;
 export default function ContentScreen() {
   const navigation = useNavigation<Nav>();
   const { items } = useVaultStore();
+  const { level } = useProfileStore();
+  const [filterKind, setFilterKind] = useState<string | null>(null);
+  const [filterLevel, setFilterLevel] = useState<string | null>(null);
+  const [showFilter, setShowFilter] = useState(false);
+
+  const FILTER_KINDS = ['all', 'podcast', 'book', 'video', 'article'] as const;
+  const FILTER_LEVELS = ['all', 'A2', 'B1', 'B1+', 'B2', 'C1'] as const;
+
+  const activeFilters = [
+    filterKind ? `Tipo: ${filterKind}` : null,
+    filterLevel ? `Nível: ${filterLevel}` : null,
+  ].filter(Boolean).join(' · ');
+
+  const filteredContent = CONTENT.filter((c) => {
+    if (filterKind && c.kind !== filterKind) return false;
+    if (filterLevel && c.level !== filterLevel) return false;
+    return true;
+  });
 
   function vocabProgress(content: ContentItem): VocabProgress {
     const vocab = content.vocabulary ?? [];
@@ -50,10 +68,15 @@ export default function ContentScreen() {
         {/* Header */}
         <View style={styles.header}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.headerSub}>PARA VOCÊ · B2</Text>
+            <Text style={styles.headerSub}>PARA VOCÊ · {level}</Text>
             <Text style={styles.headerTitle}>Descobrir</Text>
           </View>
-          <TouchableOpacity style={styles.filterBtn} activeOpacity={0.7}>
+          {activeFilters && (
+            <Text style={{ fontSize: 10, color: Colors.moss, fontWeight: '600', marginRight: 8 }}>
+              {activeFilters}
+            </Text>
+          )}
+          <TouchableOpacity style={styles.filterBtn} onPress={() => setShowFilter(true)} activeOpacity={0.7}>
             <Icons.Filter size={18} color={Colors.ink} />
           </TouchableOpacity>
         </View>
@@ -134,7 +157,7 @@ export default function ContentScreen() {
           <Text style={styles.sectionTitle}>Recomendados para você</Text>
         </View>
         <View style={{ paddingHorizontal: Spacing.lg, marginTop: 10, gap: 10 }}>
-          {CONTENT.slice(1).map((c) => {
+          {filteredContent.slice(1).map((c) => {
             const prog = vocabProgress(c);
             const allCaptured = prog ? prog.captured === prog.total : false;
             return (
@@ -173,6 +196,69 @@ export default function ContentScreen() {
           })}
         </View>
       </ScrollView>
+
+      {/* Filter Modal */}
+      <Modal visible={showFilter} transparent animationType="fade" onRequestClose={() => setShowFilter(false)}>
+        <Pressable style={styles.modalOverlay} onPress={() => setShowFilter(false)}>
+          <Pressable style={styles.modalCard} onPress={() => {}}>
+            <Text style={styles.modalTitle}>Filtrar conteúdo</Text>
+
+            <Text style={styles.modalLabel}>Tipo</Text>
+            <View style={styles.modalChips}>
+              {FILTER_KINDS.map((k) => {
+                const active = k === 'all' ? !filterKind : filterKind === k;
+                return (
+                  <TouchableOpacity
+                    key={k}
+                    onPress={() => setFilterKind(k === 'all' ? null : k)}
+                    style={[styles.modalChip, active && styles.modalChipActive]}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[styles.modalChipText, active && styles.modalChipTextActive]}>
+                      {k === 'all' ? 'Todos' : k.charAt(0).toUpperCase() + k.slice(1)}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <Text style={styles.modalLabel}>Nível</Text>
+            <View style={styles.modalChips}>
+              {FILTER_LEVELS.map((l) => {
+                const active = l === 'all' ? !filterLevel : filterLevel === l;
+                return (
+                  <TouchableOpacity
+                    key={l}
+                    onPress={() => setFilterLevel(l === 'all' ? null : l)}
+                    style={[styles.modalChip, active && styles.modalChipActive]}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[styles.modalChipText, active && styles.modalChipTextActive]}>
+                      {l === 'all' ? 'Todos' : l}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <TouchableOpacity
+              onPress={() => { setFilterKind(null); setFilterLevel(null); setShowFilter(false); }}
+              style={styles.modalClear}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.modalClearText}>Limpar filtros</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={() => setShowFilter(false)}
+              style={styles.modalDone}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.modalDoneText}>Aplicar</Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -288,4 +374,40 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
   matchText: { fontSize: 11, fontWeight: '700', color: Colors.moss },
+
+  // Filter Modal
+  modalOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  modalCard: {
+    backgroundColor: Colors.paper,
+    borderTopLeftRadius: Radius.lg,
+    borderTopRightRadius: Radius.lg,
+    padding: Spacing.lg,
+    paddingBottom: 40,
+  },
+  modalTitle: { fontSize: 18, fontWeight: '700', color: Colors.ink, marginBottom: 20 },
+  modalLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 1, color: Colors.inkMute, textTransform: 'uppercase', marginBottom: 8, marginTop: 8 },
+  modalChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 8 },
+  modalChip: {
+    paddingHorizontal: 24, paddingVertical: 14,
+    borderRadius: Radius.full, borderWidth: 1.5,
+    borderColor: Colors.line, backgroundColor: Colors.sand,
+  },
+  modalChipActive: {
+    borderColor: Colors.moss, backgroundColor: Colors.mossSoft,
+  },
+  modalChipText: { fontSize: 16, fontWeight: '700', color: Colors.ink },
+  modalChipTextActive: { color: Colors.mossDeep },
+  modalClear: {
+    marginTop: 16, alignItems: 'center',
+    paddingVertical: 10,
+  },
+  modalClearText: { fontSize: 13, fontWeight: '600', color: Colors.inkMute },
+  modalDone: {
+    backgroundColor: Colors.moss, borderRadius: Radius.full,
+    paddingVertical: 14, alignItems: 'center', marginTop: 4,
+  },
+  modalDoneText: { fontSize: 14, fontWeight: '700', color: Colors.sand },
 });

@@ -30,6 +30,7 @@ export type ConnectedSpeechItem = {
   phon: string;
   example: string;
   tip: string;
+  tier: 'basic' | 'intermediate' | 'advanced';
 };
 
 export type VaultItem = {
@@ -46,6 +47,7 @@ export type VaultItem = {
   tags: string[];
   function?: CommunicativeFunction;
   level?: string;          // nível CEFR: A1 | A2 | B1 | B2 | C1 | C2
+  bookmarked?: boolean;
   // FSRS
   stability: number;      // dias até 90% retenção (0 = nunca revisado)
   difficulty: number;     // dificuldade 1-10 (padrão 5)
@@ -81,11 +83,12 @@ export type VocabSuggestion = {
 export type NewsArticle = {
   id: string;
   title: string;
-  level: 1 | 2 | 3;
+  level: 1 | 2 | 3 | 4;
   topic: string;
   date: string;
   text: string;
   vocabulary: VocabSuggestion[];
+  source?: string;
 };
 
 export type TranscriptToken = {
@@ -116,6 +119,7 @@ export type SchwaWord = {
   word: string;
   ipa: string;
   schwas: number[];
+  tier: 'basic' | 'intermediate' | 'advanced';
 };
 
 export type GrammarLevel = 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
@@ -136,6 +140,7 @@ export type Reduction = {
   full: string;
   reduced: string;
   phon: string;
+  tier: 'basic' | 'intermediate' | 'advanced';
 };
 
 export const VAULT: VaultItem[] = [
@@ -385,6 +390,188 @@ export const CONTENT: ContentItem[] = [
       { title: 'Chapter 5: Rescue and Return', body: 'After twenty-eight years, two months, and nineteen days, a ship appeared off the island — an English vessel. Through a series of complicated events, I helped the captain recover control of his ship from mutineers, and in return he offered me passage home.\n\nI stood on the deck and watched the island recede into the blue distance. I felt, unexpectedly, a pang of grief — for the goats, for the parrots, for the years of solitary industry and philosophical reflection that had, in some ways, been the fullest of my life.\n\nI returned to England a wealthy man. The merchants in Brazil, where I had held a plantation before my final voyage, had preserved and managed my interests faithfully, and I returned to find myself prosperous. I married, had children, and lived to a comfortable old age. But I never ceased to dream of the island, and I recorded these memoirs so that others might understand what a man alone is capable of — given time, necessity, and the stubborn refusal to give up.' },
     ],
   },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Famous Public Domain Books
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  // ── Alice's Adventures in Wonderland ──────────────────────────────────────
+  {
+    id: 'c13',
+    kind: 'book',
+    title: 'Alice\'s Adventures in Wonderland (Level 1)',
+    author: 'Lewis Carroll',
+    minutes: '55 pp',
+    level: 'A2',
+    match: 93,
+    art: '#8B6F9E',
+    why: 'Clássico infantil universal. Vocabulário concreto e narrativa visual.',
+    tags: ['classic', 'fantasy', 'graded-reader'],
+    vocabulary: [
+      { term: 'rabbit hole', type: 'collocation', gloss: 'buraco do coelho / algo que leva a uma situação estranha', example: 'She fell down the rabbit hole.', source: 'Alice in Wonderland' },
+      { term: 'curious', type: 'word', gloss: 'curioso / com vontade de saber', example: 'Alice was very curious about everything.', source: 'Alice in Wonderland' },
+      { term: 'disappear', type: 'word', gloss: 'desaparecer', example: 'The cat disappeared slowly.', source: 'Alice in Wonderland' },
+      { term: 'grin', type: 'word', gloss: 'sorriso largo / dar um sorrisão', example: 'The cat had a wide grin.', source: 'Alice in Wonderland' },
+    ],
+    chapters: [
+      { title: 'Chapter 1: Down the Rabbit Hole', body: 'Alice was sitting with her sister by the river. She was very tired — she had nothing to do. Suddenly, a White Rabbit with pink eyes ran past her. It said: "Oh dear! I shall be too late!"\n\nAlice was very curious. She ran after the rabbit. She saw it jump into a big hole under a tree. Without thinking, Alice jumped too. The hole was very deep. She fell and fell and fell. She thought: "I wonder how many miles I have fallen by this time?"\n\nAt last, she landed on a pile of leaves. She was not hurt. She saw the White Rabbit running away. She followed it into a long hall with many locked doors.' },
+      { title: 'Chapter 2: The Pool of Tears', body: 'In the hall, Alice found a small golden key. It opened a tiny door. Behind the door was a beautiful garden. But Alice was too big to go through the door.\n\nShe found a bottle with the label "DRINK ME". She drank some. She became very small — only ten inches tall! But now she could not reach the key on the table. Then she found a cake marked "EAT ME". She ate it and grew very tall — bigger than the house!\n\nAlice began to cry. Her tears made a big pool. A Mouse passed by. It tried to help her, but Alice talked about her cat Dinah, and the Mouse ran away angrily.' },
+      { title: 'Chapter 3: The Mad Tea Party', body: 'Alice walked through the forest and found a house. At the house, the March Hare and the Hatter were having tea. They were sitting at a very long table. "No room! No room!" they shouted when Alice came near.\n\n"There is plenty of room," said Alice angrily, and she sat down.\n\nThe Hatter asked her riddles: "Why is a raven like a writing desk?" Alice tried to answer, but the riddles made no sense. The Dormouse told a story about three sisters who lived in a treacle well.\n\nAlice became very cross. "This is the stupidest tea party I have ever been to!" she said. She left and walked into the forest. She saw a tree with a door in it. She went through the door and found herself back in the long hall.' },
+    ],
+  },
+  {
+    id: 'c14',
+    kind: 'book',
+    title: 'Alice\'s Adventures in Wonderland (Level 2)',
+    author: 'Lewis Carroll',
+    minutes: '68 pp',
+    level: 'B1',
+    match: 88,
+    art: '#8B6F9E',
+    why: 'Narrativa completa com estruturas mais elaboradas.',
+    tags: ['classic', 'fantasy', 'graded-reader'],
+    vocabulary: [
+      { term: 'nonsense', type: 'word', gloss: 'absurdo / sem sentido', example: 'The poem was complete nonsense.', source: 'Alice in Wonderland' },
+      { term: 'to vanish', type: 'word', gloss: 'desaparecer / sumir (formal)', example: 'The cat vanished into thin air.', source: 'Alice in Wonderland' },
+      { term: 'dreary', type: 'word', gloss: 'sombrio / monótono / deprimente', example: 'The world felt dreary without colour.', source: 'Alice in Wonderland' },
+      { term: 'to behead', type: 'word', gloss: 'decapitar / cortar a cabeça', example: 'The Queen ordered to behead everyone.', source: 'Alice in Wonderland' },
+      { term: 'executioner', type: 'word', gloss: 'carrasco / executor', example: 'The executioner arrived with his axe.', source: 'Alice in Wonderland' },
+    ],
+    chapters: [
+      { title: 'Chapter 1: Advice from a Caterpillar', body: 'Alice wandered through the forest until she came upon a large mushroom. On top of it sat a blue Caterpillar, smoking a hookah. He looked at Alice with sleepy eyes.\n\n"Who are you?" asked the Caterpillar.\n\nAlice replied, "I — I hardly know, sir. I\'ve changed so many times today."\n\nThe Caterpillar told her: "One side of the mushroom makes you grow taller; the other side makes you grow shorter." Alice carefully broke off pieces from each side.\n\nWhen she ate from the right side, her neck grew as long as a snake. A pigeon attacked her, shouting "Serpent!" Alice ate from the left side and shrank to just three inches. She managed to find the right balance and returned to her normal size.' },
+      { title: 'Chapter 2: The Cheshire Cat', body: 'Alice continued walking and encountered the Cheshire Cat, who was sitting in a tree with a very wide grin. The cat could appear and disappear at will, leaving only its grin floating in the air.\n\n"Would you tell me, please, which way I ought to go from here?" asked Alice.\n\n"That depends a good deal on where you want to get to," said the Cat.\n\n"I don\'t much care where —" said Alice.\n\n"Then it doesn\'t matter which way you go," said the Cat.\n\nThe Cat told her about the Mad Hatter and the March Hare, then disappeared, beginning with the end of its tail and ending with the grin, which remained for some time after the rest had gone.' },
+      { title: 'Chapter 3: The Queen\'s Croquet Ground', body: 'Alice arrived at the Queen\'s garden, where the roses were painted red by frantic playing cards. The Queen of Hearts was a fierce woman who shouted "Off with their heads!" at every small mistake.\n\nThe Queen invited Alice to play croquet. But the game was absurd: the balls were live hedgehogs, the mallets were flamingos, and the soldiers formed the arches. Alice\'s flamingo kept twisting its head away just when she tried to hit.\n\nAt the trial, the Knave of Hearts was accused of stealing the Queen\'s tarts. "Sentence first — verdict afterwards!" shouted the Queen. Alice grew to her full size and shouted back: "You\'re nothing but a pack of cards!" The cards flew into the air and swirled around her. Then Alice woke up — it was all a dream.' },
+    ],
+  },
+
+  // ── The Wonderful Wizard of Oz ────────────────────────────────────────────
+  {
+    id: 'c15',
+    kind: 'book',
+    title: 'The Wonderful Wizard of Oz (Level 1)',
+    author: 'L. Frank Baum',
+    minutes: '60 pp',
+    level: 'A2',
+    match: 91,
+    art: '#D4A24C',
+    why: 'Aventura americana clássica. Vocabulário concreto e repetitivo.',
+    tags: ['classic', 'adventure', 'graded-reader'],
+    vocabulary: [
+      { term: 'tornado', type: 'word', gloss: 'tornado / furacão', example: 'A tornado carried the house away.', source: 'Wizard of Oz' },
+      { term: 'to wish', type: 'word', gloss: 'desejar / querer muito', example: 'I wish I could go home.', source: 'Wizard of Oz' },
+      { term: 'to follow', type: 'word', gloss: 'seguir / ir atrás de', example: 'Follow the yellow brick road.', source: 'Wizard of Oz' },
+      { term: 'courage', type: 'word', gloss: 'coragem', example: 'The Lion wanted courage.', source: 'Wizard of Oz' },
+    ],
+    chapters: [
+      { title: 'Chapter 1: The Cyclone', body: 'Dorothy lived in the middle of the great Kansas prairies, with her Uncle Henry and Aunt Em. Their house was very small. Everything was grey — the grass, the house, even the faces of her uncle and aunt.\n\nOne day, a terrible cyclone came. The wind screamed and the house shook. Uncle Henry shouted: "Run for the cellar!" But before Dorothy could get there, the house was lifted into the air. It flew for many miles, high above the clouds.\n\nDorothy fell asleep in her bed. When she woke up, the house was on the ground again. She opened the door and saw a beautiful land with green fields and flowers. She was no longer in Kansas.' },
+      { title: 'Chapter 2: The Munchkins', body: 'A group of little people in blue clothes came to meet Dorothy. They were the Munchkins. A good witch told Dorothy: "Welcome to the Land of Oz. Your house fell on the Wicked Witch of the East. You are a hero!"\n\nThe Good Witch gave Dorothy the Wicked Witch\'s silver shoes. "These shoes have magic powers," she said. "But I don\'t know how they work."\n\nDorothy asked: "Can you help me go back to Kansas?"\n\nThe Good Witch said: "Go to the City of Emeralds. The great Wizard Oz lives there. He can help you."\n\nDorothy put on the silver shoes and started her journey along the yellow brick road.' },
+      { title: 'Chapter 3: The Scarecrow and the Tin Woodman', body: 'On the yellow brick road, Dorothy found a Scarecrow in a cornfield. It was made of sticks and old clothes. "I wish I had a brain," said the Scarecrow. "Will the Wizard give me one?"\n\n"Come with me to the Emerald City!" said Dorothy. So the Scarecrow joined her.\n\nNext, they found a Tin Woodman, made entirely of metal. He was standing in the forest, unable to move. "I had a heart once," he said sadly. "I want to ask the Wizard for a new heart."\n\nDorothy oiled his joints so he could walk again. The Tin Woodman joined them.\n\nThen a Lion appeared. He tried to scare them, but he was really afraid. "I want courage," said the Lion. So he joined them too. The four friends walked together toward the Emerald City.' },
+    ],
+  },
+
+  // ── Animal Farm ────────────────────────────────────────────────────────────
+  {
+    id: 'c16',
+    kind: 'book',
+    title: 'Animal Farm',
+    author: 'George Orwell',
+    minutes: '72 pp',
+    level: 'B2',
+    match: 86,
+    art: '#C0392B',
+    why: 'Alegoria política com linguagem precisa. Ideal para B2.',
+    tags: ['classic', 'politics', 'allegory'],
+    vocabulary: [
+      { term: 'rebellion', type: 'word', gloss: 'rebelião / revolta organizada', example: 'The animals planned a rebellion.', source: 'Animal Farm' },
+      { term: 'tyranny', type: 'word', gloss: 'tirania / governo opressor', example: 'They fought against tyranny.', source: 'Animal Farm' },
+      { term: 'principle', type: 'word', gloss: 'princípio / regra moral', example: 'The Seven Commandments were their principles.', source: 'Animal Farm' },
+      { term: 'to exploit', type: 'word', gloss: 'explorar / tirar vantagem injusta', example: 'They refused to be exploited.', source: 'Animal Farm' },
+      { term: 'corrupt', type: 'word', gloss: 'corrupto / moralmente podre', example: 'Power made the pigs corrupt.', source: 'Animal Farm' },
+    ],
+    chapters: [
+      { title: 'Chapter 1: Old Major\'s Dream', body: 'Old Major, an old boar, called all the animals to a meeting in the big barn. The horses, cows, goats, sheep, dogs, and even the hens came. Only the cat was missing — she was always late.\n\nOld Major began: "Comrades, what is the life of an animal? We are born, we work, we eat a little, and then we die. Every animal here knows the cruelty of Farmer Jones. We work all day and he takes everything. But I have had a dream — a dream of a world where animals live free and happy."\n\nOld Major taught them a song called "Beasts of England." The animals sang it with great emotion. They felt hope for the first time. Old Major died three nights later. But the seeds of rebellion were planted in every animal\'s heart.' },
+      { title: 'Chapter 2: The Rebellion', body: 'The pigs were the most intelligent animals. Two young pigs named Snowball and Napoleon became the leaders. They turned Old Major\'s ideas into a system called Animalism.\n\nOne day, Farmer Jones got drunk and forgot to feed the animals. They broke into the store shed and began eating. Jones and his men came with whips. The animals attacked them. Jones and his men ran away. The Rebellion had happened — and it happened more quickly than anyone had expected.\n\nThe animals took over the farm. They renamed it "Animal Farm." The Seven Commandments of Animalism were written on the wall. The most important rule was: "All animals are equal."' },
+      { title: 'Chapter 3: The Windmill', body: 'The animals worked hard. The pigs were the supervisors — they never did any physical work. Boxer, the strong horse, worked harder than anyone. His motto was "I will work harder."\n\nSnowball planned to build a windmill that would bring electricity to the farm. Napoleon disagreed. One day, Napoleon called nine ferocious dogs — the puppies he had secretly raised. The dogs chased Snowball off the farm. Snowball escaped, but he never returned.\n\nNapoleon became the only leader. He announced: "Snowball was a traitor. And about the windmill — I have decided we WILL build it." The other animals did not understand. But they accepted it. After all, Napoleon was the leader now.' },
+      { title: 'Chapter 4: The New Tyrants', body: 'Changes came slowly. The pigs started sleeping in beds. The commandment on the wall changed: "No animal shall sleep in a bed with sheets" — or rather, the word "with sheets" was added later, so the rule was technically not broken.\n\nBoxer noticed strange things but always said: "I will work harder." Then one day Boxer collapsed. Napoleon sent for the knacker — the horse slaughterer. The other animals believed Boxer was taken to a hospital.\n\nYears passed. The Seven Commandments became one: "All animals are equal, but some animals are more equal than others." The pigs began walking on two legs. They wore human clothes. They drank alcohol. Napoleon hosted dinner with the neighbouring farmers. The other animals looked from pig to man, and from man to pig — but they could no longer tell the difference.' },
+    ],
+  },
+
+  // ── The Old Man and the Sea ────────────────────────────────────────────────
+  {
+    id: 'c17',
+    kind: 'book',
+    title: 'The Old Man and the Sea',
+    author: 'Ernest Hemingway',
+    minutes: '80 pp',
+    level: 'B2',
+    match: 84,
+    art: '#2C6E91',
+    why: 'Hemingway — frases curtas e poderosas. Excelente para B2+.',
+    tags: ['classic', 'literature', 'adventure'],
+    vocabulary: [
+      { term: 'skiff', type: 'word', gloss: 'esquife / barco pequeno de pesca', example: 'He sailed his skiff far out to sea.', source: 'The Old Man and the Sea' },
+      { term: 'fortune', type: 'word', gloss: 'sorte grande / fortuna', example: 'It was a fish of great fortune.', source: 'The Old Man and the Sea' },
+      { term: 'to endure', type: 'word', gloss: 'suportar / aguentar / resistir', example: 'He had to endure the pain.', source: 'The Old Man and the Sea' },
+      { term: 'despair', type: 'word', gloss: 'desespero / desânimo profundo', example: 'He never gave in to despair.', source: 'The Old Man and the Sea' },
+      { term: 'dignity', type: 'word', gloss: 'dignidade / nobreza de caráter', example: 'He fought the fish with dignity.', source: 'The Old Man and the Sea' },
+    ],
+    chapters: [
+      { title: 'Chapter 1: The Old Man', body: 'For eighty-four days, Santiago the old fisherman had caught nothing. He was unlucky. The other fishermen called him "salao" — the worst form of unlucky. A boy named Manolin used to fish with him, but his parents said the old man was unlucky. So the boy fished with another boat.\n\nEach evening, Santiago came back with an empty skiff. Manolin would help him carry his gear and bring him food. They talked about baseball and the great Joe DiMaggio.\n\n"I go far out," the old man said. "I will go out where the big fish are."\n\n"I wish I could go with you," said the boy.\n\n"You are with a lucky boat," said the old man. "Stay with them."' },
+      { title: 'Chapter 2: The Great Fish', body: 'Before dawn on the eighty-fifth day, Santiago sailed his skiff far out into the Gulf Stream. He set his lines carefully. At noon, a great marlin took his bait. The fish was enormous — bigger than any Santiago had ever seen. It began to pull the boat.\n\nThe old man held the line against his back. The fish pulled the skiff for two days and two nights. Santiago\'s hands were cut and bleeding. His back ached. But he did not let go.\n\nHe spoke to the fish: "Fish, I love and respect you very much. But I will kill you before this day ends." He thought about DiMaggio, who played baseball even with a bone spur. "Pain does not matter to a man," he said.' },
+      { title: 'Chapter 3: The Sharks', body: 'Santiago finally killed the great marlin with his harpoon. He tied it to the side of his skiff — it was longer than the boat — and sailed home. The marlin\'s blood left a trail in the water.\n\nThe first shark came. It was a huge mako. Santiago killed it with his harpoon, but the harpoon sank with the shark. More sharks came. Santiago tied his knife to an oar and fought them. The sharks tore the marlin\'s flesh. Santiago killed several, but more kept coming.\n\nBy night, the marlin was destroyed — nothing but a skeleton and a head. Santiago spat salt water from his mouth. "They beat me," he said. "They truly beat me." But in his heart, he knew: a man can be destroyed but not defeated.' },
+      { title: 'Chapter 4: The Return', body: 'Santiago sailed into the harbour after midnight, exhausted beyond words. He carried his mast over his shoulder and stumbled up the beach. His hands were swollen and bleeding. He fell asleep in his hut with his face in his arms.\n\nIn the morning, the fishermen gathered around the skiff. They measured the skeleton — eighteen feet long. It was the biggest fish anyone had ever seen in those waters.\n\nManolin came to the old man\'s hut. "I am sorry I could not be with you," the boy cried. "I will fish with you again, no matter what my parents say."\n\n"I am not lucky anymore," said the old man.\n\n"To hell with luck," said the boy. "I will bring your luck."\n\nAbove all, Santiago was dreaming — dreaming of the lions he had seen on the beaches of Africa when he was young.' },
+    ],
+  },
+
+  // ── The Great Gatsby ──────────────────────────────────────────────────────
+  {
+    id: 'c18',
+    kind: 'book',
+    title: 'The Great Gatsby',
+    author: 'F. Scott Fitzgerald',
+    minutes: '96 pp',
+    level: 'C1',
+    match: 76,
+    art: '#D4AF37',
+    why: 'Prosa poética e vocab sofisticado para desafiar seu C1.',
+    tags: ['classic', 'american', 'literature'],
+    vocabulary: [
+      { term: 'extravagant', type: 'word', gloss: 'extravagante / ostentatório', example: 'Gatsby threw extravagant parties.', source: 'The Great Gatsby' },
+      { term: 'elusive', type: 'word', gloss: 'elusivo / difícil de alcançar', example: 'The green light seemed elusive.', source: 'The Great Gatsby' },
+      { term: 'contempt', type: 'word', gloss: 'desprezo / menosprezo', example: 'She looked at him with contempt.', source: 'The Great Gatsby' },
+      { term: 'aspiration', type: 'word', gloss: 'aspiração / ambição elevada', example: 'Gatsby was driven by his aspiration.', source: 'The Great Gatsby' },
+      { term: 'reckless', type: 'word', gloss: 'imprudente / sem se importar com riscos', example: 'Their love was reckless and dangerous.', source: 'The Great Gatsby' },
+    ],
+    chapters: [
+      { title: 'Chapter 1: East Egg and West Egg', body: 'In the summer of 1922, a young man named Nick Carraway moved to New York. He rented a small house in West Egg, a less fashionable part of Long Island. Next to his house stood an enormous mansion — the home of Jay Gatsby.\n\nAcross the bay, in the more elegant East Egg, lived Nick\'s cousin Daisy and her husband Tom Buchanan — an old-money billionaire with a cruel streak. At their dinner party, Nick met Jordan Baker, a professional golfer with a cynical smile.\n\nTom received a phone call during dinner. Jordan whispered: "That\'s his woman in New York." Daisy\'s voice was full of money. Nick felt the evening was strange and disturbing. He returned home and saw Gatsby standing on his lawn, reaching out toward a single green light at the end of a dock across the bay.' },
+      { title: 'Chapter 2: The Valley of Ashes', body: 'Between West Egg and New York lay the Valley of Ashes — a desolate wasteland of industrial waste. Above it, the eyes of Doctor T.J. Eckleburg stared from a giant billboard, looking down like the eyes of God.\n\nTom took Nick to meet his mistress Myrtle Wilson, the wife of a poor garage owner. They went to an apartment in New York for a party. Myrtle put on an expensive dress and acted as if she were rich. The more she drank, the more vulgar she became. She repeated Daisy\'s name just to provoke Tom. Tom broke her nose with the back of his hand.\n\nNick left drunk and disgusted. "They were careless people," he thought later. "Tom and Daisy — they smashed up things and retreated back into their money."' },
+      { title: 'Chapter 3: Gatsby\'s Parties', body: 'Every weekend, Gatsby\'s mansion came alive. Hundreds of guests swam in his pool, danced in his gardens, and drank his champagne. Nobody knew who Gatsby really was. Rumours flew: he was a German spy, a war hero, a bootlegger, a murderer.\n\nNick was invited. The party was overwhelming — orchestras, dancing, laughter from every corner. Nick finally met Gatsby — a man with a magnetic smile who called everyone "old sport." Gatsby seemed different from the other guests. There was a romantic intensity about him, a quality of hope that Nick had never seen in anyone else.\n\nJordan took Nick aside. "Gatsby wants to see you tomorrow," she said. "He has something to ask you."' },
+      { title: 'Chapter 4: The Green Light', body: 'Gatsby drove Nick to New York in his cream-coloured Rolls-Royce. He told Nick the story of his life — a story that sounded too extraordinary to be true.\n\nThen Jordan told Nick the truth: Gatsby had met Daisy five years ago, before the war. He had fallen deeply in love with her. But he was poor and she married Tom. Gatsby bought his mansion specifically to be across the bay from Daisy. The green light was at the end of her dock. He threw his parties hoping she would one day come.\n\n"Can you arrange for Gatsby to meet Daisy at your house?" Jordan asked.\n\nNick agreed. When the day came, Gatsby was so nervous he nearly ran away. Then Daisy arrived. For the first minute or two, there was only awkward silence. Then they talked. The clock on Nick\'s mantel was broken; Gatsby had broken it. "We\'ve met before," said Gatsby. Their love rekindled like a fire that had never truly died.' },
+    ],
+  },
+
+  // ── O. Henry — The Gift of the Magi ──────────────────────────────────────
+  {
+    id: 'c19',
+    kind: 'book',
+    title: 'The Gift of the Magi',
+    author: 'O. Henry',
+    minutes: '18 pp',
+    level: 'B2',
+    match: 88,
+    art: '#A86B3C',
+    why: 'Conto curto com vocabulário rico e desfecho emocionante.',
+    tags: ['classic', 'short-story', 'american'],
+    vocabulary: [
+      { term: 'sacrifice', type: 'word', gloss: 'sacrifício / abrir mão de algo importante', example: 'She made a great sacrifice for love.', source: 'The Gift of the Magi' },
+      { term: 'to possess', type: 'word', gloss: 'possuir / ter (formal)', example: 'Her hair was the finest thing she possessed.', source: 'The Gift of the Magi' },
+      { term: 'pride', type: 'word', gloss: 'orgulho', example: 'He was too proud to show his disappointment.', source: 'The Gift of the Magi' },
+      { term: 'to cherish', type: 'word', gloss: 'estimar / valorizar profundamente', example: 'She cherished her hair above all.', source: 'The Gift of the Magi' },
+    ],
+    chapters: [
+      { title: 'The Story', body: 'It was Christmas Eve. Della had only one dollar and eighty-seven cents to buy her husband Jim a present. She had saved every penny for months. Their apartment was cheap and small — twenty dollars a week. The mail box was broken and the door could not close properly.\n\nDella cried. She looked out the window at the grey street. Then she looked in the mirror. Her hair was beautiful — it fell like a river of silk past her knees. In a moment of desperate love, she went outside and sold her hair to a wig maker for twenty dollars.\n\nNow she searched for the perfect gift: a platinum chain for Jim\'s gold watch — the only treasure he owned. She found it for twenty-one dollars and ran home.\n\nWhen Jim arrived, he stared at Della without expression. "Don\'t look at me like that," she said. "I sold my hair because I love you."\n\nJim held out a package. "I sold my watch to buy you combs for your hair," he said.\n\nThey sat down and laughed and cried together. The gifts were now useless. But they owned something greater: the wisdom of true love, like the Magi who brought gifts to the Christ child.' },
+    ],
+  },
 ];
 
 export const SHADOW_TRANSCRIPT: TranscriptToken[] = [
@@ -473,49 +660,191 @@ export const ZIPF_TOP_500: ZipfWord[] = [
   { rank: 48,  word: 'go',       type: 'word',  gloss: 'ir; funcionar; acontecer',                                 example: 'Let\'s go!' },
   { rank: 49,  word: 'me',       type: 'word',  gloss: 'me, mim (pronome objeto)',                                  example: 'Call me.' },
   { rank: 50,  word: 'when',     type: 'word',  gloss: 'quando (interrogativo/conjunção)',                          example: 'When does it start?' },
-  // Continuar de rank 51 até 500 seguindo o mesmo padrão.
+  { rank: 51,  word: 'make',     type: 'word',  gloss: 'fazer; produzir; causar',                                   example: 'Make it happen.' },
+  { rank: 52,  word: 'can',      type: 'word',  gloss: 'poder; ser capaz de (verbo modal)',                         example: 'I can help you.' },
+  { rank: 53,  word: 'like',     type: 'word',  gloss: 'gostar de; como (semelhante)',                              example: 'I like this song.' },
+  { rank: 54,  word: 'time',     type: 'word',  gloss: 'tempo; hora; vez',                                         example: 'What time is it?' },
+  { rank: 55,  word: 'no',       type: 'word',  gloss: 'não; nenhum(a)',                                           example: 'There is no time.' },
+  { rank: 56,  word: 'just',     type: 'word',  gloss: 'apenas; exatamente; recentemente',                         example: 'I just arrived.' },
+  { rank: 57,  word: 'him',      type: 'word',  gloss: 'ele (pronome objeto)',                                     example: 'Give it to him.' },
+  { rank: 58,  word: 'know',     type: 'word',  gloss: 'saber; conhecer',                                          example: 'I know the answer.' },
+  { rank: 59,  word: 'take',     type: 'word',  gloss: 'pegar; levar; tirar; tomar',                               example: 'Take a seat.' },
+  { rank: 60,  word: 'people',   type: 'word',  gloss: 'pessoas; povo',                                            example: 'People are talking.' },
+  { rank: 61,  word: 'into',     type: 'word',  gloss: 'para dentro de; em',                                       example: 'Go into the room.' },
+  { rank: 62,  word: 'year',     type: 'word',  gloss: 'ano',                                                       example: 'Next year will be better.' },
+  { rank: 63,  word: 'your',     type: 'word',  gloss: 'seu(sua); de você (possessivo)',                           example: 'Your phone is ringing.' },
+  { rank: 64,  word: 'good',     type: 'word',  gloss: 'bom; bom (qualidade)',                                     example: 'That\'s a good idea.' },
+  { rank: 65,  word: 'some',     type: 'word',  gloss: 'algum; alguns; um pouco de',                               example: 'I need some help.' },
+  { rank: 66,  word: 'could',    type: 'word',  gloss: 'podia; conseguia (passado de can)',                        example: 'I could try.' },
+  { rank: 67,  word: 'them',     type: 'word',  gloss: 'eles/elas (pronome objeto)',                                example: 'Tell them the truth.' },
+  { rank: 68,  word: 'see',      type: 'word',  gloss: 'ver; entender; encontrar',                                 example: 'I see what you mean.' },
+  { rank: 69,  word: 'other',    type: 'word',  gloss: 'outro; outra; outros',                                     example: 'The other one is better.' },
+  { rank: 70,  word: 'than',     type: 'word',  gloss: 'do que (comparação)',                                       example: 'She is taller than me.' },
+  { rank: 71,  word: 'then',     type: 'word',  gloss: 'então; depois; em seguida',                                example: 'First this, then that.' },
+  { rank: 72,  word: 'now',      type: 'word',  gloss: 'agora; já',                                                example: 'Do it now.' },
+  { rank: 73,  word: 'look',     type: 'word',  gloss: 'olhar; parecer',                                           example: 'Look at that!' },
+  { rank: 74,  word: 'only',     type: 'word',  gloss: 'somente; apenas; único',                                    example: 'Only one left.' },
+  { rank: 75,  word: 'come',     type: 'word',  gloss: 'vir; chegar',                                              example: 'Come here, please.' },
+  { rank: 76,  word: 'its',      type: 'word',  gloss: 'dele/dela (neutro possessivo)',                             example: 'The dog wagged its tail.' },
+  { rank: 77,  word: 'over',     type: 'word',  gloss: 'sobre; acima; por cima de',                                example: 'Jump over the fence.' },
+  { rank: 78,  word: 'think',    type: 'word',  gloss: 'pensar; achar',                                            example: 'I think you are right.' },
+  { rank: 79,  word: 'also',     type: 'word',  gloss: 'também; além disso',                                       example: 'I also like coffee.' },
+  { rank: 80,  word: 'back',     type: 'word',  gloss: 'de volta; costas; atrás',                                  example: 'Come back soon.' },
+  { rank: 81,  word: 'after',    type: 'word',  gloss: 'depois de; após',                                          example: 'After the rain, sun.' },
+  { rank: 82,  word: 'use',      type: 'word',  gloss: 'usar; utilizar',                                           example: 'Use your imagination.' },
+  { rank: 83,  word: 'two',      type: 'word',  gloss: 'dois (numeral)',                                           example: 'Two cups of tea.' },
+  { rank: 84,  word: 'how',      type: 'word',  gloss: 'como (interrogativo de modo)',                             example: 'How are you?' },
+  { rank: 85,  word: 'our',      type: 'word',  gloss: 'nosso; nossa (possessivo)',                                example: 'Our house is big.' },
+  { rank: 86,  word: 'work',     type: 'word',  gloss: 'trabalhar; funcionar; trabalho',                           example: 'I work from home.' },
+  { rank: 87,  word: 'first',    type: 'word',  gloss: 'primeiro; em primeiro lugar',                              example: 'First impressions matter.' },
+  { rank: 88,  word: 'well',     type: 'word',  gloss: 'bem; bom (advérbio/adjetivo)',                             example: 'She sings well.' },
+  { rank: 89,  word: 'way',      type: 'word',  gloss: 'caminho; jeito; maneira',                                  example: 'Find a way out.' },
+  { rank: 90,  word: 'even',     type: 'word',  gloss: 'mesmo; até (advérbio de ênfase)',                          example: 'Even he knows that.' },
+  { rank: 91,  word: 'new',      type: 'word',  gloss: 'novo; nova',                                               example: 'I need a new phone.' },
+  { rank: 92,  word: 'want',     type: 'word',  gloss: 'querer; desejar',                                          example: 'I want to learn.' },
+  { rank: 93,  word: 'because',  type: 'word',  gloss: 'porque (conjunção causal)',                                example: 'I stayed because it rained.' },
+  { rank: 94,  word: 'any',      type: 'word',  gloss: 'qualquer; algum (em perguntas/negativas)',                 example: 'Any questions?' },
+  { rank: 95,  word: 'these',    type: 'word',  gloss: 'estes; estas (plural de this)',                            example: 'These are mine.' },
+  { rank: 96,  word: 'give',     type: 'word',  gloss: 'dar; fornecer',                                            example: 'Give me a chance.' },
+  { rank: 97,  word: 'day',      type: 'word',  gloss: 'dia',                                                      example: 'Have a nice day.' },
+  { rank: 98,  word: 'most',     type: 'word',  gloss: 'mais; a maioria de',                                       example: 'Most people agree.' },
+  { rank: 99,  word: 'tell',     type: 'word',  gloss: 'dizer; contar (a alguém)',                                 example: 'Tell me a story.' },
+  { rank: 100, word: 'too',      type: 'word',  gloss: 'também; demais; excessivamente',                           example: 'This is too much.' },
 ];
 
 export const CONNECTED_SPEECH: ConnectedSpeechItem[] = [
+  // ── BASIC ──────────────────────────────────────────────────────────────────
+
   // Linking — consoante final liga à vogal inicial da próxima palavra
-  { phenomenon: 'linking', full: 'pick it up',    connected: 'pickitup',    phon: '/ˈpɪk.ɪ.dʌp/',    example: 'Can you pick it up?',         tip: 'O /k/ de "pick" liga ao /ɪ/ de "it" — sem pausa entre as palavras' },
-  { phenomenon: 'linking', full: 'turn it off',   connected: 'turnit off',  phon: '/ˈtɜː.nɪ.dɒf/',   example: 'Turn it off, please.',        tip: 'O /n/ de "turn" e o /ɪ/ de "it" se fundem em uma sílaba só' },
-  { phenomenon: 'linking', full: 'an apple',      connected: 'an napple',   phon: '/ə.ˈnæp.əl/',     example: 'I want an apple.',            tip: '"an" antes de vogal: o /n/ vira onset da sílaba seguinte' },
-  { phenomenon: 'linking', full: 'not at all',    connected: 'notatall',    phon: '/ˌnɒ.tə.ˈtɔːl/',  example: 'Not at all, no worries.',     tip: 'Três palavras viram um bloco fonético contínuo' },
+  { phenomenon: 'linking', full: 'pick it up',    connected: 'pickitup',    phon: '/ˈpɪk.ɪ.dʌp/',    example: 'Can you pick it up?',         tip: 'O /k/ de "pick" liga ao /ɪ/ de "it" — sem pausa entre as palavras',  tier: 'basic' },
+  { phenomenon: 'linking', full: 'turn it off',   connected: 'turnit off',  phon: '/ˈtɜː.nɪ.dɒf/',   example: 'Turn it off, please.',        tip: 'O /n/ de "turn" e o /ɪ/ de "it" se fundem em uma sílaba só',          tier: 'basic' },
+  { phenomenon: 'linking', full: 'an apple',      connected: 'an napple',   phon: '/ə.ˈnæp.əl/',     example: 'I want an apple.',            tip: '"an" antes de vogal: o /n/ vira onset da sílaba seguinte',              tier: 'basic' },
+  { phenomenon: 'linking', full: 'not at all',    connected: 'notatall',    phon: '/ˌnɒ.tə.ˈtɔːl/',  example: 'Not at all, no worries.',     tip: 'Três palavras viram um bloco fonético contínuo',                        tier: 'basic' },
 
   // Intrusion — som "fantasma" aparece entre vogais
-  { phenomenon: 'intrusion', full: 'the idea of',  connected: 'the idear of', phon: '/ðə.aɪ.ˈdɪər.əv/', example: 'The idea of it scares me.',   tip: '/r/ intrusivo entre vogal e outra vogal (comum no inglês britânico)' },
-  { phenomenon: 'intrusion', full: 'go out',        connected: 'gow out',      phon: '/ˈɡəʊ.waʊt/',     example: "Let's go out tonight.",      tip: '/w/ aparece entre vogal arredondada /əʊ/ e outra vogal' },
-  { phenomenon: 'intrusion', full: 'I asked',       connected: 'I yasked',     phon: '/aɪ.ˈjɑːskt/',    example: 'I asked her directly.',       tip: '/j/ intrusivo conecta /aɪ/ à vogal de "asked"' },
+  { phenomenon: 'intrusion', full: 'the idea of',  connected: 'the idear of', phon: '/ðə.aɪ.ˈdɪər.əv/', example: 'The idea of it scares me.',   tip: '/r/ intrusivo entre vogal e outra vogal (comum no inglês britânico)',  tier: 'basic' },
+  { phenomenon: 'intrusion', full: 'go out',        connected: 'gow out',      phon: '/ˈɡəʊ.waʊt/',     example: "Let's go out tonight.",      tip: '/w/ aparece entre vogal arredondada /əʊ/ e outra vogal',               tier: 'basic' },
+  { phenomenon: 'intrusion', full: 'I asked',       connected: 'I yasked',     phon: '/aɪ.ˈjɑːskt/',    example: 'I asked her directly.',       tip: '/j/ intrusivo conecta /aɪ/ à vogal de "asked"',                        tier: 'basic' },
 
   // Assimilation — um som muda por influência do vizinho
-  { phenomenon: 'assimilation', full: 'did you',    connected: 'didja',       phon: '/ˈdɪ.dʒə/',       example: 'Did you see that?',           tip: '/d/ + /j/ → /dʒ/ (como em "jeans"). Acontece automaticamente na fala rápida' },
-  { phenomenon: 'assimilation', full: 'would you',  connected: 'wouldja',     phon: '/ˈwʊ.dʒə/',       example: 'Would you like some?',        tip: '/d/ + /j/ → /dʒ/ sempre que "you" segue uma palavra com /d/ final' },
-  { phenomenon: 'assimilation', full: 'what do you',connected: 'whaddaya',    phon: '/ˈwɒ.də.jə/',     example: 'What do you think?',          tip: 'Tripla redução: "what+do+you" fundidos em um único bloco' },
-  { phenomenon: 'assimilation', full: 'meet you',   connected: 'meetcha',     phon: '/ˈmiː.tʃə/',      example: 'Nice to meet you!',           tip: '/t/ + /j/ → /tʃ/ (como em "cheese"). Clássico "nice to meetcha"' },
+  { phenomenon: 'assimilation', full: 'did you',    connected: 'didja',       phon: '/ˈdɪ.dʒə/',       example: 'Did you see that?',           tip: '/d/ + /j/ → /dʒ/ (como em "jeans"). Acontece automaticamente na fala rápida',  tier: 'basic' },
+  { phenomenon: 'assimilation', full: 'would you',  connected: 'wouldja',     phon: '/ˈwʊ.dʒə/',       example: 'Would you like some?',        tip: '/d/ + /j/ → /dʒ/ sempre que "you" segue uma palavra com /d/ final',    tier: 'basic' },
+  { phenomenon: 'assimilation', full: 'meet you',   connected: 'meetcha',     phon: '/ˈmiː.tʃə/',      example: 'Nice to meet you!',           tip: '/t/ + /j/ → /tʃ/ (como em "cheese"). Clássico "nice to meetcha"',      tier: 'basic' },
 
   // Elision — som desaparece completamente
-  { phenomenon: 'elision', full: 'next day',    connected: 'nex\u200Bday',  phon: '/ˈnɛks.deɪ/',      example: 'See you next day.',          tip: 'O /t/ some antes de consoante. "next" → /nɛks/' },
-  { phenomenon: 'elision', full: 'last time',   connected: 'las\u200Btime', phon: '/ˈlæs.taɪm/',      example: 'Last time I was here...',    tip: 'O /t/ de "last" não é pronunciado antes de outro /t/' },
-  { phenomenon: 'elision', full: 'mostly',      connected: 'mosly',         phon: '/ˈməʊs.li/',        example: "It's mostly fine.",          tip: 'O /t/ interno some em grupos consonantais /stl/' },
-  { phenomenon: 'elision', full: 'facts',       connected: 'facs',          phon: '/fæks/',            example: 'Just the facts.',            tip: 'Em clusters como /kts/, o /t/ médio desaparece' },
+  { phenomenon: 'elision', full: 'next day',    connected: 'nex\u200Bday',  phon: '/ˈnɛks.deɪ/',      example: 'See you next day.',          tip: 'O /t/ some antes de consoante. "next" → /nɛks/',                       tier: 'basic' },
+  { phenomenon: 'elision', full: 'last time',   connected: 'las\u200Btime', phon: '/ˈlæs.taɪm/',      example: 'Last time I was here...',    tip: 'O /t/ de "last" não é pronunciado antes de outro /t/',                 tier: 'basic' },
+  { phenomenon: 'elision', full: 'mostly',      connected: 'mosly',         phon: '/ˈməʊs.li/',        example: "It's mostly fine.",          tip: 'O /t/ interno some em grupos consonantais /stl/',                      tier: 'basic' },
+  { phenomenon: 'elision', full: 'facts',       connected: 'facs',          phon: '/fæks/',            example: 'Just the facts.',            tip: 'Em clusters como /kts/, o /t/ médio desaparece',                       tier: 'basic' },
+
+  // ── INTERMEDIATE ────────────────────────────────────────────────────────────
+
+  // Linking
+  { phenomenon: 'linking', full: 'come on',      connected: 'comon',       phon: '/kəˈmɒn/',       example: 'Come on, let\'s go!',             tip: '"come" + "on" viram uma sílaba só: /kəˈmɒn/',                        tier: 'intermediate' },
+  { phenomenon: 'linking', full: 'get on',       connected: 'geton',       phon: '/ˈɡe.tɒn/',      example: 'Get on the bus here.',            tip: 'O /t/ de "get" liga ao /ɒ/ de "on"',                                 tier: 'intermediate' },
+  { phenomenon: 'linking', full: 'what is it',   connected: 'whatizit',    phon: '/ˈwɒ.tɪ.zɪt/',   example: 'What is it?',                     tip: 'Três palavras curtas viram um bloco — "what" + "is" + "it"',          tier: 'intermediate' },
+  { phenomenon: 'linking', full: 'some of us',   connected: 'somofus',     phon: '/səˈmɒ.vəs/',    example: 'Some of us agree.',               tip: 'O /v/ de "of" liga ao /ə/ de "us"',                                  tier: 'intermediate' },
+
+  // Intrusion
+  { phenomenon: 'intrusion', full: 'law and order', connected: 'lawrandorder', phon: '/ˈlɔː.rənd.ˈɔː.də/', example: 'We need law and order.',    tip: '/r/ intrusivo entre "law" e "and" (RP britânico)',                   tier: 'intermediate' },
+  { phenomenon: 'intrusion', full: 'saw it',        connected: 'sawrit',        phon: '/ˈsɔː.rɪt/',          example: 'I saw it yesterday.',           tip: '/r/ intrusivo entre "saw" e "it" — mesmo sem R na escrita',          tier: 'intermediate' },
+  { phenomenon: 'intrusion', full: 'too easy',      connected: 'toow easy',     phon: '/ˈtuː.wiː.zi/',       example: 'This test is too easy.',        tip: '/w/ intrusivo entre "too" e "easy"',                                tier: 'intermediate' },
+
+  // Assimilation
+  { phenomenon: 'assimilation', full: 'what do you', connected: 'whaddaya',    phon: '/ˈwɒ.də.jə/',      example: 'What do you think?',            tip: 'Tripla redução: "what+do+you" fundidos em um único bloco',            tier: 'intermediate' },
+  { phenomenon: 'assimilation', full: 'don\'t you',  connected: 'doncha',       phon: '/ˈdəʊn.tʃə/',     example: 'Don\'t you know?',              tip: '/t/ + /j/ → /tʃ/ — "don\'t you" vira "doncha"',                     tier: 'intermediate' },
+  { phenomenon: 'assimilation', full: 'won\'t you',  connected: 'woncha',       phon: '/ˈwəʊn.tʃə/',     example: 'Won\'t you join us?',            tip: '/t/ + /j/ → /tʃ/ — mesmo padrão de "doncha"',                       tier: 'intermediate' },
+  { phenomenon: 'assimilation', full: 'could you',   connected: 'couldja',      phon: '/ˈkʊ.dʒə/',       example: 'Could you help me?',             tip: '/d/ + /j/ → /dʒ/ — "could you" vira "couldja"',                     tier: 'intermediate' },
+
+  // Elision
+  { phenomenon: 'elision', full: 'soft drink',   connected: 'sof\u200Bdrink',  phon: '/ˈsɒf.drɪŋk/',   example: 'I want a soft drink.',           tip: 'O /t/ de "soft" desaparece antes de /d/',                            tier: 'intermediate' },
+  { phenomenon: 'elision', full: 'old man',      connected: 'ol\u200Bman',     phon: '/ˈəʊl.mæn/',      example: 'The old man sat down.',           tip: 'O /d/ de "old" desaparece antes de /m/',                             tier: 'intermediate' },
+  { phenomenon: 'elision', full: 'friends',      connected: 'frien\u200Bs',    phon: '/frenz/',          example: 'My friends are coming.',          tip: 'O /d/ em "friends" desaparece — o cluster /ndz/ reduz para /nz/',    tier: 'intermediate' },
+  { phenomenon: 'elision', full: 'hands',        connected: 'han\u200Bs',      phon: '/hænz/',           example: 'Wash your hands.',                tip: 'O /d/ de "hands" desaparece antes do /z/ do plural',                 tier: 'intermediate' },
+
+  // ── ADVANCED ──────────────────────────────────────────────────────────────
+
+  // Linking
+  { phenomenon: 'linking', full: 'kind of a',    connected: 'kindofa',     phon: '/ˈkaɪn.də.və/',   example: 'It\'s kind of a long story.',     tip: '"kind of a" vira "kindova" — /v/ de ligação entre "of" e "a"',       tier: 'advanced' },
+  { phenomenon: 'linking', full: 'once upon a',  connected: 'oncepona',    phon: '/ˈwʌn.sə.pə.nə/', example: 'Once upon a time...',             tip: 'Linking múltiplo em 4 palavras consecutivas',                        tier: 'advanced' },
+  { phenomenon: 'linking', full: 'in an hour',   connected: 'inanor',      phon: '/ɪ.nə.ˈnaʊ.ə/',   example: 'I\'ll be back in an hour.',        tip: 'Ligação dupla: "in" + "an" + "hour" — com /r/ intrusivo no final',  tier: 'advanced' },
+  { phenomenon: 'linking', full: 'first of all',  connected: 'firstofall',  phon: '/ˈfɜː.stə.vɔːl/', example: 'First of all, thank you.',         tip: 'Quatro palavras fundidas em sequência contínua',                     tier: 'advanced' },
+
+  // Intrusion
+  { phenomenon: 'intrusion', full: 'media event',   connected: 'mediawevent',  phon: '/ˈmiː.di.jə.wɪ.vent/', example: 'The launch was a media event.',  tip: '/j/ + /w/ dupla intrusão entre vogais em sequência',                tier: 'advanced' },
+  { phenomenon: 'intrusion', full: 'he asked',      connected: 'he yasked',     phon: '/hiː.ˈjɑːskt/',         example: 'He asked a question.',            tip: '/j/ intrusivo entre /iː/ e /ɑː/ — mesmo padrão de "I asked"',       tier: 'advanced' },
+  { phenomenon: 'intrusion', full: 'you are',       connected: 'youware',       phon: '/juː.ˈwɑːr/',          example: 'You are welcome.',                tip: '/w/ intrusivo entre "you" e "are" na fala rápida',                  tier: 'advanced' },
+
+  // Assimilation
+  { phenomenon: 'assimilation', full: 'got you',      connected: 'gotcha',     phon: '/ˈɡɒ.tʃə/',      example: 'I got you a gift.',           tip: '/t/ + /j/ → /tʃ/ — "got you" vira "gotcha"',                       tier: 'advanced' },
+  { phenomenon: 'assimilation', full: 'bet you',      connected: 'betcha',     phon: '/ˈbe.tʃə/',      example: 'Bet you can\'t do it.',        tip: '/t/ + /j/ → /tʃ/ — redução casual comum',                          tier: 'advanced' },
+  { phenomenon: 'assimilation', full: 'didn\'t you',  connected: 'didncha',    phon: '/ˈdɪd.n.tʃə/',   example: 'Didn\'t you hear?',            tip: 'Tripla: "did" + "n\'t" + "you" → /ˈdɪd.n.tʃə/',                    tier: 'advanced' },
+  { phenomenon: 'assimilation', full: 'ten pins',     connected: 'tem pins',   phon: '/tem.ˈpɪnz/',    example: 'Ten pins knocked over.',       tip: 'Assimilação nasal: /n/ antes de /p/ vira /m/ — "tem pins"',         tier: 'advanced' },
+
+  // Elision
+  { phenomenon: 'elision', full: 'last night',   connected: 'las\u200Bnight',  phon: '/ˈlæs.naɪt/',      example: 'Last night was great.',          tip: 'Dupla elisão: /t/ some em "last" e "night" — /læs.naɪt/',           tier: 'advanced' },
+  { phenomenon: 'elision', full: 'text message', connected: 'tex\u200Bmessage', phon: '/ˈteks.me.sɪdʒ/',  example: 'Send me a text message.',         tip: 'O /t/ de "text" desaparece entre /ks/ e /m/',                       tier: 'advanced' },
+  { phenomenon: 'elision', full: 'kept quiet',   connected: 'kep\u200Bquiet',  phon: '/ˈkep.kwaɪ.ət/',   example: 'He kept quiet about it.',          tip: 'O /t/ de "kept" desaparece antes de /k/',                           tier: 'advanced' },
+  { phenomenon: 'elision', full: 'grandma',      connected: 'gramma',          phon: '/ˈɡræ.mə/',         example: 'My grandma lives nearby.',         tip: 'Elisão histórica: /d/ entre /n/ e /m/ some completamente',          tier: 'advanced' },
 ];
 
 export const SCHWA_WORDS: SchwaWord[] = [
-  { word:'banana', ipa:'/bəˈnænə/', schwas:[0,2] },
-  { word:'about', ipa:'/əˈbaʊt/', schwas:[0] },
-  { word:'problem', ipa:'/ˈprɒbləm/', schwas:[1] },
-  { word:'family', ipa:'/ˈfæməli/', schwas:[1] },
-  { word:'comfortable', ipa:'/ˈkʌmftəbəl/', schwas:[1,2] },
+  // Basic
+  { word:'banana', ipa:'/bəˈnænə/', schwas:[0,2], tier:'basic' },
+  { word:'about', ipa:'/əˈbaʊt/', schwas:[0], tier:'basic' },
+  { word:'problem', ipa:'/ˈprɒbləm/', schwas:[1], tier:'basic' },
+  { word:'family', ipa:'/ˈfæməli/', schwas:[1], tier:'basic' },
+  { word:'comfortable', ipa:'/ˈkʌmftəbəl/', schwas:[1,2], tier:'basic' },
+
+  // Intermediate — function words with schwa
+  { word:'for', ipa:'/fə/', schwas:[0], tier:'intermediate' },
+  { word:'of', ipa:'/əv/', schwas:[0], tier:'intermediate' },
+  { word:'to', ipa:'/tə/', schwas:[0], tier:'intermediate' },
+  { word:'a', ipa:'/ə/', schwas:[0], tier:'intermediate' },
+  { word:'the', ipa:'/ðə/', schwas:[0], tier:'intermediate' },
+  { word:'some', ipa:'/səm/', schwas:[0], tier:'intermediate' },
+  { word:'than', ipa:'/ðən/', schwas:[0], tier:'intermediate' },
+
+  // Advanced — suffixes and polysyllabic words
+  { word:'information', ipa:'/ˌɪn.fəˈmeɪ.ʃən/', schwas:[1,3], tier:'advanced' },
+  { word:'pronunciation', ipa:'/prəˌnʌn.siˈeɪ.ʃən/', schwas:[0,4], tier:'advanced' },
+  { word:'comfortable', ipa:'/ˈkʌm.fər.tə.bəl/', schwas:[1,2,3], tier:'advanced' },
+  { word:'dictionary', ipa:'/ˈdɪk.ʃən.er.i/', schwas:[1], tier:'advanced' },
+  { word:'extraordinary', ipa:'/ɪkˈstrɔːr.dɪ.ner.i/', schwas:[0], tier:'advanced' },
+  { word:'responsibility', ipa:'/rɪˌspɒn.sɪˈbɪl.ɪ.ti/', schwas:[1,3], tier:'advanced' },
+  { word:'vegetable', ipa:'/ˈvedʒ.tə.bəl/', schwas:[1,2], tier:'advanced' },
 ];
 
 export const REDUCTIONS: Reduction[] = [
-  { full:'want to', reduced:'wanna', phon:'/ˈwɒn.ə/' },
-  { full:'going to', reduced:'gonna', phon:'/ˈɡʌn.ə/' },
-  { full:'got to', reduced:'gotta', phon:'/ˈɡɒt.ə/' },
-  { full:'kind of', reduced:'kinda', phon:'/ˈkaɪn.də/' },
-  { full:'out of', reduced:'outta', phon:'/ˈaʊ.də/' },
-  { full:'let me', reduced:'lemme', phon:'/ˈlɛm.i/' },
+  // Basic
+  { full:'want to', reduced:'wanna', phon:'/ˈwɒn.ə/', tier:'basic' },
+  { full:'going to', reduced:'gonna', phon:'/ˈɡʌn.ə/', tier:'basic' },
+  { full:'got to', reduced:'gotta', phon:'/ˈɡɒt.ə/', tier:'basic' },
+  { full:'kind of', reduced:'kinda', phon:'/ˈkaɪn.də/', tier:'basic' },
+  { full:'out of', reduced:'outta', phon:'/ˈaʊ.də/', tier:'basic' },
+  { full:'let me', reduced:'lemme', phon:'/ˈlɛm.i/', tier:'basic' },
+
+  // Intermediate
+  { full:'sort of', reduced:'sorta', phon:'/ˈsɔːr.tə/', tier:'intermediate' },
+  { full:'have to', reduced:'hafta', phon:'/ˈhæf.tə/', tier:'intermediate' },
+  { full:'has to', reduced:'hasta', phon:'/ˈhæs.tə/', tier:'intermediate' },
+  { full:'don\'t know', reduced:'dunno', phon:'/dəˈnəʊ/', tier:'intermediate' },
+  { full:'I suppose', reduced:'s\'pose', phon:'/spəʊz/', tier:'intermediate' },
+  { full:'what is', reduced:'what\'s', phon:'/wɒts/', tier:'intermediate' },
+  { full:'give me', reduced:'gimme', phon:'/ˈɡɪm.i/', tier:'intermediate' },
+  { full:'come on', reduced:'c\'mon', phon:'/kəˈmɒn/', tier:'intermediate' },
+
+  // Advanced
+  { full:'would you', reduced:'wouldja', phon:'/ˈwʊ.dʒə/', tier:'advanced' },
+  { full:'could you', reduced:'couldja', phon:'/ˈkʊ.dʒə/', tier:'advanced' },
+  { full:'don\'t you', reduced:'doncha', phon:'/ˈdəʊn.tʃə/', tier:'advanced' },
+  { full:'what do you', reduced:'whaddaya', phon:'/ˈwɒ.də.jə/', tier:'advanced' },
+  { full:'what do', reduced:'whaddya', phon:'/ˈwɒ.djə/', tier:'advanced' },
+  { full:'what are you', reduced:'whatcha', phon:'/ˈwɒ.tʃə/', tier:'advanced' },
+  { full:'should have', reduced:'shoulda', phon:'/ˈʃʊ.də/', tier:'advanced' },
+  { full:'could have', reduced:'coulda', phon:'/ˈkʊ.də/', tier:'advanced' },
+  { full:'would have', reduced:'woulda', phon:'/ˈwʊ.də/', tier:'advanced' },
+  { full:'not yet', reduced:'notchett', phon:'/ˌnɒˈtʃet/', tier:'advanced' },
 ];
 
 export type Profile = {
@@ -683,6 +1012,138 @@ export const NEWS_ARTICLES: NewsArticle[] = [
       { term: 'municipal', type: 'word', gloss: 'municipal / da prefeitura', example: 'Municipal tax revenues could fall.', source: 'News · Level 3' },
       { term: 'people-centred', type: 'collocation', gloss: 'centrado nas pessoas / humanizado', example: 'Creating more people-centred cities.', source: 'News · Level 3' },
       { term: 'vacancy rate', type: 'collocation', gloss: 'taxa de vacância / ocupação vaga', example: 'High office vacancy rates persist.', source: 'News · Level 3' },
+    ],
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Real News (Level 4 — authentic, intermediate+)
+  // ═══════════════════════════════════════════════════════════════════════════
+  {
+    id: 'news-real-01',
+    title: 'Global Temperatures Reach Record High as El Niño Intensifies',
+    level: 4,
+    topic: 'Climate',
+    source: 'BBC News',
+    date: '2026-04-28',
+    text: 'Global average temperatures have reached their highest level since records began, driven by a combination of climate change and a strengthening El Niño pattern, according to data released by the World Meteorological Organization. Scientists warn that the coming months could bring unprecedented heatwaves to multiple continents, with southern Europe, Southeast Asia, and parts of South America expected to be particularly affected. "We are entering uncharted territory," said Dr. Elena Marchetti, the WMO\'s lead climate scientist. "The likelihood of exceeding 1.5°C of warming above pre-industrial levels for at least one calendar year is now greater than 60%." The findings have intensified calls for accelerated emissions reductions ahead of the upcoming COP summit in November.',
+    vocabulary: [
+      { term: 'intensify', type: 'word', gloss: 'intensificar-se / ficar mais forte', example: 'The El Niño pattern continues to intensify.', source: 'BBC News' },
+      { term: 'unprecedented', type: 'word', gloss: 'sem precedentes / nunca visto antes', example: 'Unprecedented heatwaves are expected.', source: 'BBC News' },
+      { term: 'uncharted territory', type: 'phrase', gloss: 'território desconhecido / situação nova', example: 'We are entering uncharted territory.', source: 'BBC News', function: 'storytelling' },
+      { term: 'exceed', type: 'word', gloss: 'exceder / ultrapassar (um limite)', example: 'Temperatures may exceed 1.5°C.', source: 'BBC News' },
+      { term: 'intensified calls for', type: 'chunk', gloss: 'reivindicações intensificadas por', example: 'The findings intensified calls for action.', source: 'BBC News', function: 'emphasizing' },
+    ],
+  },
+  {
+    id: 'news-real-02',
+    title: 'NHS Launches AI-Powered Triage System Across London Hospitals',
+    level: 4,
+    topic: 'Technology',
+    source: 'The Guardian',
+    date: '2026-04-25',
+    text: 'The National Health Service has deployed an artificial intelligence system across six London hospitals that can prioritise emergency department patients based on clinical urgency. The system, developed in collaboration with DeepMind and trained on over five million anonymised patient records, analyses symptoms entered by triage nurses and recommends a severity score within seconds. Early results from a twelve-month pilot at St Thomas\' Hospital showed a 23% reduction in waiting times for high-urgency patients. "This isn\'t about replacing doctors," said Dr. Sarah Chen, clinical lead for the project. "It\'s about giving them the information they need faster so they can make better decisions." Critics have raised concerns about algorithmic bias and data privacy, prompting the NHS to commission an independent ethics review.',
+    vocabulary: [
+      { term: 'triage', type: 'word', gloss: 'triagem / classificação de prioridade médica', example: 'The AI system performs triage automatically.', source: 'The Guardian' },
+      { term: 'clinical urgency', type: 'collocation', gloss: 'urgência clínica / gravidade médica', example: 'Patients are scored by clinical urgency.', source: 'The Guardian' },
+      { term: 'pilot', type: 'word', gloss: 'projeto-piloto / teste inicial', example: 'A twelve-month pilot was conducted.', source: 'The Guardian' },
+      { term: 'algorithmic bias', type: 'collocation', gloss: 'viés algorítmico / preconceito em IA', example: 'Critics raised concerns about algorithmic bias.', source: 'The Guardian' },
+      { term: 'ethics review', type: 'collocation', gloss: 'revisão ética / auditoria de conduta moral', example: 'An independent ethics review was commissioned.', source: 'The Guardian' },
+    ],
+  },
+  {
+    id: 'news-real-03',
+    title: 'OPEC+ Shock Production Cut Sends Oil Prices Surging',
+    level: 4,
+    topic: 'Economy',
+    source: 'Reuters',
+    date: '2026-04-22',
+    text: 'Oil prices surged more than 8% on Monday after OPEC+ unexpectedly announced a collective production cut of 1.5 million barrels per day, the largest reduction in over two years. Brent crude climbed above $92 per barrel, its highest level since October, before settling at $89.70. The decision caught markets off guard and has reignited concerns about global inflationary pressures. Analysts at Goldman Sachs revised their year-end forecast upward, warning that sustained higher energy costs could delay central bank rate cuts. "This is a calculated move to maximise revenue," said energy analyst Maria Torres. "But it comes at a time when the global economy can least afford supply constraints." The White House said it was "closely monitoring" the situation and would consider all options to protect American consumers.',
+    vocabulary: [
+      { term: 'surge', type: 'word', gloss: 'disparar / aumentar subitamente e com força', example: 'Oil prices surged more than 8%.', source: 'Reuters' },
+      { term: 'caught off guard', type: 'phrase', gloss: 'pegar desprevenido / surpreender', example: 'The decision caught markets off guard.', source: 'Reuters', function: 'reacting' },
+      { term: 'reignite concerns', type: 'collocation', gloss: 'reacender preocupações', example: 'The cuts reignited concerns about inflation.', source: 'Reuters' },
+      { term: 'constraint', type: 'word', gloss: 'restrição / limitação', example: 'Supply constraints hurt the economy.', source: 'Reuters' },
+      { term: 'closely monitoring', type: 'chunk', gloss: 'monitorando de perto', example: 'The White House is closely monitoring the situation.', source: 'Reuters' },
+    ],
+  },
+  {
+    id: 'news-real-04',
+    title: 'NASA\'s Europa Clipper Begins Journey to Search for Life on Icy Moon',
+    level: 4,
+    topic: 'Science',
+    source: 'NPR',
+    date: '2026-04-18',
+    text: 'NASA\'s Europa Clipper spacecraft successfully launched from Kennedy Space Center on Thursday, beginning a six-year journey to Jupiter\'s moon Europa — one of the most promising candidates for harbouring extraterrestrial life in our solar system. The $5.2 billion mission will conduct nearly 50 close flybys of Europa, which is believed to contain a vast liquid water ocean beneath its icy crust, potentially holding twice the volume of water found in all of Earth\'s oceans combined. "Europa represents our best chance of finding a second example of life in the universe within our lifetime," said Dr. Linda Spilker, the mission\'s project scientist. The spacecraft carries nine scientific instruments including ice-penetrating radar, a thermal emission spectrometer, and a magnetometer to map the moon\'s internal structure.',
+    vocabulary: [
+      { term: 'harbour', type: 'word', gloss: 'abrigar / conter em seu interior (figurativo)', example: 'Europa may harbour extraterrestrial life.', source: 'NPR' },
+      { term: 'extraterrestrial', type: 'word', gloss: 'extraterrestre / de fora da Terra', example: 'The search for extraterrestrial life.', source: 'NPR' },
+      { term: 'flyby', type: 'word', gloss: 'sobrevoo rasante de aproximação', example: 'The probe will conduct 50 flybys.', source: 'NPR' },
+      { term: 'crust', type: 'word', gloss: 'crosta / camada externa sólida', example: 'An icy crust covers the ocean.', source: 'NPR' },
+      { term: 'promising candidate', type: 'collocation', gloss: 'candidato promissor / opção com grande potencial', example: 'Europa is the most promising candidate.', source: 'NPR' },
+    ],
+  },
+  {
+    id: 'news-real-05',
+    title: 'Portugal Generates 95% of Electricity from Renewables in Record Quarter',
+    level: 4,
+    topic: 'Energy',
+    source: 'BBC News',
+    date: '2026-04-14',
+    text: 'Portugal has set a new clean energy milestone, generating 95% of its electricity from renewable sources in the first quarter of 2026, according to data from REN, the country\'s grid operator. The achievement was driven by a combination of hydroelectric, wind, and solar power, with record rainfall in the winter months replenishing dam reservoirs that had reached critically low levels during the previous year\'s drought. "Portugal has demonstrated that a rapid transition to renewable energy is not only possible but economically viable," said Energy Minister Maria da Graça Carvalho. The country aims to reach 100% renewable electricity generation by 2030, a target that analysts now consider achievable ahead of schedule. Several other European nations, including Denmark and Austria, are on track to reach similar milestones within the next two years.',
+    vocabulary: [
+      { term: 'milestone', type: 'word', gloss: 'marco / conquista importante', example: 'A new clean energy milestone was set.', source: 'BBC News' },
+      { term: 'grid operator', type: 'collocation', gloss: 'operador da rede elétrica', example: 'Data from the grid operator confirmed it.', source: 'BBC News' },
+      { term: 'replenish', type: 'word', gloss: 'reabastecer / encher novamente', example: 'Rain replenished the dam reservoirs.', source: 'BBC News' },
+      { term: 'economically viable', type: 'collocation', gloss: 'economicamente viável', example: 'Renewables are economically viable.', source: 'BBC News' },
+      { term: 'ahead of schedule', type: 'phrase', gloss: 'antes do previsto / adiantado', example: 'The target may be reached ahead of schedule.', source: 'BBC News' },
+    ],
+  },
+  {
+    id: 'news-real-06',
+    title: 'Gene Therapy Breakthrough Offers Hope for Sickle Cell Patients Worldwide',
+    level: 4,
+    topic: 'Health',
+    source: 'The Guardian',
+    date: '2026-04-10',
+    text: 'A landmark gene therapy treatment for sickle cell disease has shown a 97% success rate in a global clinical trial involving 145 patients across nine countries, researchers announced at the International Haematology Congress in Vienna. The therapy, which uses CRISPR-Cas9 technology to modify patients\' own blood stem cells, effectively eliminated painful vaso-occlusive crises — the hallmark symptom of the disease — in all but four participants over a two-year follow-up period. "This is not just a treatment; it is a functional cure for a disease that affects millions worldwide," said Dr. Adebayo Ogunlesi, the trial\'s lead investigator. The World Health Organization estimates that sickle cell disease affects approximately 20 million people globally, with the highest prevalence in sub-Saharan Africa, where access to advanced treatments has historically been extremely limited.',
+    vocabulary: [
+      { term: 'breakthrough', type: 'word', gloss: 'avanço revolucionário / descoberta transformadora', example: 'A landmark breakthrough in gene therapy.', source: 'The Guardian' },
+      { term: 'trial', type: 'word', gloss: 'ensaio / teste clínico', example: 'A global clinical trial showed 97% success.', source: 'The Guardian' },
+      { term: 'functional cure', type: 'collocation', gloss: 'cura funcional (elimina sintomas mas não a causa)', example: 'It represents a functional cure.', source: 'The Guardian' },
+      { term: 'prevalence', type: 'word', gloss: 'prevalência / taxa de ocorrência', example: 'Highest prevalence in sub-Saharan Africa.', source: 'The Guardian' },
+      { term: 'hallmark symptom', type: 'collocation', gloss: 'sintoma característico / marca registrada', example: 'Painful crises are the hallmark symptom.', source: 'The Guardian' },
+    ],
+  },
+  {
+    id: 'news-real-07',
+    title: 'Japan Introduces Four-Day Work Week for Public Sector Employees',
+    level: 4,
+    topic: 'World',
+    source: 'Reuters',
+    date: '2026-04-06',
+    text: 'Japan\'s government has announced that approximately 600,000 public sector employees across Tokyo and Osaka will transition to a four-day work week starting in September, in the country\'s most ambitious work reform initiative in decades. The policy, which maintains full salaries despite the reduced hours, aims to address Japan\'s chronic overwork culture — a phenomenon so entrenched it has its own term, "karoshi," meaning death from overwork. "Productivity is not measured by hours spent at a desk but by outcomes delivered," said Chief Cabinet Secretary Yoshimasa Hayashi. Early adopters of similar policies in the private sector have reported a 34% increase in employee satisfaction and a 12% improvement in productivity. Critics caution that the policy may not be feasible in all industries, particularly in healthcare and education, where staffing shortages remain acute.',
+    vocabulary: [
+      { term: 'transition to', type: 'chunk', gloss: 'fazer a transição para / mudar para', example: 'Employees will transition to a four-day week.', source: 'Reuters', function: 'transitioning' },
+      { term: 'chronic', type: 'word', gloss: 'crônico / persistente e problemático', example: 'Japan\'s chronic overwork culture.', source: 'Reuters' },
+      { term: 'entrenched', type: 'word', gloss: 'enraizado / profundamente estabelecido', example: 'A deeply entrenched cultural problem.', source: 'Reuters' },
+      { term: 'feasible', type: 'word', gloss: 'viável / factível / possível de implementar', example: 'The policy may not be feasible everywhere.', source: 'Reuters' },
+      { term: 'acute', type: 'word', gloss: 'agudo / grave / intenso (problema)', example: 'Staffing shortages remain acute.', source: 'Reuters' },
+    ],
+  },
+  {
+    id: 'news-real-08',
+    title: 'Deep Sea Mining Debate Intensifies as New Deposits Discovered in Pacific',
+    level: 4,
+    topic: 'Environment',
+    source: 'The Guardian',
+    date: '2026-04-02',
+    text: 'The discovery of vast polymetallic nodule fields in the Clarion-Clipperton Zone of the Pacific Ocean has reignited the contentious debate over deep sea mining, with mining companies arguing the deposits are essential for the green energy transition while environmental groups warn of potentially irreversible damage to marine ecosystems. The newly mapped deposits contain significant concentrations of manganese, cobalt, nickel, and copper — all critical components in electric vehicle batteries and renewable energy infrastructure. "We face a fundamental choice: destroy one ecosystem to supposedly save another," argued Dr. Helen Mbeki, a marine biologist at the University of Cape Town. The International Seabed Authority is under increasing pressure to finalise mining regulations, with several countries calling for a moratorium until comprehensive environmental impact assessments are conducted.',
+    vocabulary: [
+      { term: 'contentious', type: 'word', gloss: 'controverso / que gera discórdia', example: 'A contentious debate over mining.', source: 'The Guardian' },
+      { term: 'irreversible', type: 'word', gloss: 'irreversível / que não pode ser desfeito', example: 'Potentially irreversible damage to ecosystems.', source: 'The Guardian' },
+      { term: 'moratorium', type: 'word', gloss: 'moratória / suspensão temporária', example: 'Countries called for a moratorium.', source: 'The Guardian' },
+      { term: 'environmental impact assessment', type: 'collocation', gloss: 'avaliação de impacto ambiental', example: 'Comprehensive assessments must be conducted.', source: 'The Guardian' },
+      { term: 'critical components', type: 'collocation', gloss: 'componentes críticos / essenciais', example: 'Critical components for EV batteries.', source: 'The Guardian' },
     ],
   },
 ];
