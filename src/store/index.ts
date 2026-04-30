@@ -91,6 +91,38 @@ export const useVaultStore = create<VaultStore>()(
 // ─── ProfileStore ─────────────────────────────────────────────────────────────
 export type StudyIntensity = 'light' | 'moderate' | 'deep' | 'all';
 
+export type BadgeDef = { id: string; label: string; icon: string; desc: string };
+export const BADGE_DEFS: BadgeDef[] = [
+  { id: 'first-capture',  label: 'Primeira Captura', icon: '🎯', desc: 'Capture sua primeira palavra' },
+  { id: 'collector-50',   label: 'Colecionador',     icon: '📚', desc: '50 palavras no Vault' },
+  { id: 'scholar-100',    label: 'Acadêmico',        icon: '🎓', desc: '100 palavras no Vault' },
+  { id: 'streak-7',       label: 'Dedicado',         icon: '🔥', desc: '7 dias de streak' },
+  { id: 'streak-30',      label: 'Maratona',         icon: '💪', desc: '30 dias de streak' },
+  { id: 'first-review',   label: 'Primeira Revisão', icon: '✅', desc: 'Complete sua primeira revisão SRS' },
+  { id: 'reviews-100',    label: 'Incansável',       icon: '⚡', desc: '100 cards revisados' },
+  { id: 'grammar-star',   label: 'Gramático',        icon: '📖', desc: 'Complete 5 lições de gramática' },
+];
+
+export const XP_PER_REVIEW = 10;
+export const XP_PER_CAPTURE = 5;
+export const XP_PER_CHALLENGE = 20;
+
+export function xpForLevel(lvl: number): number {
+  return lvl * (lvl + 1) * 50; // level 1=100, 2=300, 3=600, 4=1000, 5=1500...
+}
+
+export function levelFromXp(xp: number): number {
+  let lvl = 1;
+  while (xpForLevel(lvl) <= xp) lvl++;
+  return lvl;
+}
+
+type DailyChallenge = {
+  id: string;
+  label: string;
+  done: boolean;
+};
+
 type ProfileStore = {
   name: string;
   level: string;
@@ -106,6 +138,9 @@ type ProfileStore = {
   dailyGoal: number;        // target reviews per day (default 15)
   todayReviewed: number;    // cards reviewed today (resets on new day)
   visitedConnectedSpeech: boolean;
+  xp: number;
+  badges: string[];
+  dailyChallenges: DailyChallenge[];
   setName: (n: string) => void;
   setLevel: (l: string) => void;
   setOnboarded: () => void;
@@ -115,6 +150,10 @@ type ProfileStore = {
   setStudyIntensity: (i: StudyIntensity) => void;
   setClozeEnabled: (v: boolean) => void;
   setDailyGoal: (n: number) => void;
+  addXp: (amount: number) => void;
+  addBadge: (id: string) => void;
+  initDailyChallenges: () => void;
+  completeChallenge: (id: string) => void;
 };
 
 export const useProfileStore = create<ProfileStore>()(
@@ -134,6 +173,9 @@ export const useProfileStore = create<ProfileStore>()(
       dailyGoal: 15,
       todayReviewed: 0,
       visitedConnectedSpeech: false,
+      xp: 0,
+      badges: [],
+      dailyChallenges: [],
       setName: (name) => set({ name }),
       setLevel: (level) => set({ level }),
       setOnboarded: () => set({ onboarded: true }),
@@ -147,6 +189,42 @@ export const useProfileStore = create<ProfileStore>()(
           const avg = Math.round((s.avgLatencyMs * s.latencySamples + ms) / samples);
           return { avgLatencyMs: avg, latencySamples: samples };
         }),
+      addXp: (amount) =>
+        set((s) => ({ xp: s.xp + amount })),
+      addBadge: (id) =>
+        set((s) => {
+          if (s.badges.includes(id)) return s;
+          return { badges: [...s.badges, id] };
+        }),
+      initDailyChallenges: () =>
+        set((s) => {
+          const today = todayKey();
+          if (s.dailyChallenges.length > 0 && s.dailyChallenges[0].id.startsWith(today)) {
+            return s; // already initialized for today
+          }
+          // Deterministic tasks based on dayOfYear
+          const doy = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86_400_000);
+          const taskPool = [
+            { id: 'review',   label: 'Revisar 10 cards no SRS' },
+            { id: 'capture',  label: 'Capturar 3 novas palavras' },
+            { id: 'read',     label: 'Ler 1 notícia em inglês' },
+            { id: 'grammar',  label: 'Estudar 1 lição de gramática' },
+            { id: 'pronounce',label: 'Praticar pronúncia por 5 min' },
+            { id: 'streak',   label: 'Manter o streak do dia' },
+          ];
+          // Pick 3 tasks deterministically based on the day
+          const tasks = [0, 1, 2].map((offset) => {
+            const idx = (doy + offset) % taskPool.length;
+            return { ...taskPool[idx], id: `${today}-${taskPool[idx].id}`, done: false };
+          });
+          return { dailyChallenges: tasks };
+        }),
+      completeChallenge: (id) =>
+        set((s) => ({
+          dailyChallenges: s.dailyChallenges.map((t) =>
+            t.id === id ? { ...t, done: true } : t
+          ),
+        })),
       trackStudySession: (cards) =>
         set((s) => {
           const today = todayKey();
@@ -163,7 +241,6 @@ export const useProfileStore = create<ProfileStore>()(
           const idx = dayOfWeekIdx();
           const weekly = [...s.weeklyCards];
           weekly[idx] = s.lastStudyDate === today ? weekly[idx] + cards : cards;
-          // todayReviewed: reset on new day, accumulate same day
           const todayReviewed = s.lastStudyDate === today
             ? s.todayReviewed + cards
             : cards;

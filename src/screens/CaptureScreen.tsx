@@ -57,7 +57,7 @@ export default function CaptureScreen() {
   const itemId = route.params?.itemId;
 
   const { addItem, updateItem, items } = useVaultStore();
-  const { level: profileLevel } = useProfileStore();
+  const { level: profileLevel, addXp, addBadge } = useProfileStore();
 
   const existingItem = itemId ? items.find((v) => v.id === itemId) : null;
   const isEditing = !!existingItem;
@@ -145,6 +145,8 @@ export default function CaptureScreen() {
       updateItem(existingItem.id, data);
     } else {
       addItem(data);
+      addXp(5);
+      addBadge('first-capture');
     }
     navigation.goBack();
   };

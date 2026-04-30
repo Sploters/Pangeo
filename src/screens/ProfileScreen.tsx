@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Colors, Radius, Spacing } from '../theme';
 import { PgCard, PgChip, PgRing, PgRadar, RadarAxis, Icons } from '../components';
-import { useVaultStore, useProfileStore } from '../store';
+import { useVaultStore, useProfileStore, BADGE_DEFS, levelFromXp, xpForLevel } from '../store';
 import { ZIPF_TOP_500 } from '../data/seed';
 
 const DAY_LABELS = ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'];
@@ -17,7 +17,7 @@ const LEVEL_BONUS: Record<string, number> = { A1: 20, A2: 32, B1: 48, 'B1+': 56,
 
 export default function ProfileScreen() {
   const navigation = useNavigation();
-  const { name, level, streak, bestStreak, weeklyCards, avgLatencyMs, latencySamples, dailyGoal, setDailyGoal } = useProfileStore();
+  const { name, level, streak, bestStreak, weeklyCards, avgLatencyMs, latencySamples, dailyGoal, setDailyGoal, xp, badges } = useProfileStore();
   const { items } = useVaultStore();
 
   const calendarDays = useMemo(() => {
@@ -192,6 +192,45 @@ export default function ProfileScreen() {
             </View>
           </PgCard>
         </View>
+
+        {/* XP & Level */}
+        <View style={{ paddingHorizontal: Spacing.lg, paddingTop: 20 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.coralSoft, borderRadius: Radius.md, padding: 14 }}>          
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 10, fontWeight: '700', letterSpacing: 1, color: Colors.coral, textTransform: 'uppercase' }}>
+                Nível {levelFromXp(xp)}
+              </Text>
+              <Text style={{ fontSize: 22, fontWeight: '700', color: Colors.coral, marginTop: 2 }}>{xp} XP</Text>
+              <Text style={{ fontSize: 11, color: Colors.coral, opacity: 0.7, marginTop: 2 }}>
+                +{xpForLevel(levelFromXp(xp)) - xp} XP para o próximo nível
+              </Text>
+            </View>
+            <Text style={{ fontSize: 40 }}>🏆</Text>
+          </View>
+        </View>
+
+        {/* Badges */}
+        {badges.length > 0 && (
+          <View style={{ paddingHorizontal: Spacing.lg, paddingTop: 16 }}>
+            <Text style={styles.sectionTitle}>Conquistas</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              {BADGE_DEFS.filter((b) => badges.includes(b.id)).map((b) => (
+                <View key={b.id} style={{
+                  flexDirection: 'row', alignItems: 'center', gap: 6,
+                  backgroundColor: Colors.paper, borderRadius: Radius.full,
+                  borderWidth: 0.5, borderColor: Colors.line,
+                  paddingHorizontal: 12, paddingVertical: 8,
+                }}>
+                  <Text style={{ fontSize: 18 }}>{b.icon}</Text>
+                  <View>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: Colors.ink }}>{b.label}</Text>
+                    <Text style={{ fontSize: 9, color: Colors.inkMute }}>{b.desc}</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
 
         {/* Pillars */}
         <View style={{ paddingHorizontal: Spacing.lg, paddingTop: 20 }}>

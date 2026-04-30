@@ -66,16 +66,30 @@ export default function NewsArticleScreen() {
     setTooltip(null);
   };
 
-  // Split text into word tokens, marking vocab words
+  // Split text into segments, matching vocab terms (single and multi-word)
   const tokens = useMemo(() => {
-    return article.text.split(/(\s+)/).map((token, i) => {
-      const clean = token.replace(/[^a-zA-Z'-]/g, '').toLowerCase();
-      const matched = article.vocabulary.find((v) => {
-        const vWords = v.term.toLowerCase().split(' ');
-        return vWords.length === 1 && vWords[0] === clean;
-      });
-      return { raw: token, key: i, vocab: matched ?? null };
-    });
+    const sorted = [...article.vocabulary].sort((a, b) => b.term.length - a.term.length);
+    const escaped = sorted.map((v) => v.term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    if (escaped.length === 0) return article.text.split(/(\s+)/).map((raw, key) => ({ raw, key, vocab: null }));
+    const pattern = new RegExp(`(${escaped.join('|')})`, 'gi');
+    const parts: { raw: string; key: number; vocab: typeof article.vocabulary[0] | null }[] = [];
+    let lastIndex = 0;
+    let key = 0;
+    pattern.lastIndex = 0;
+    for (;;) {
+      const m = pattern.exec(article.text);
+      if (!m) break;
+      if (m.index > lastIndex) {
+        parts.push({ raw: article.text.slice(lastIndex, m.index), key: key++, vocab: null });
+      }
+      const match = sorted.find((v) => v.term.toLowerCase() === m[0].toLowerCase());
+      parts.push({ raw: m[0], key: key++, vocab: match ?? null });
+      lastIndex = pattern.lastIndex;
+    }
+    if (lastIndex < article.text.length) {
+      parts.push({ raw: article.text.slice(lastIndex), key: key++, vocab: null });
+    }
+    return parts;
   }, [article]);
 
   return (

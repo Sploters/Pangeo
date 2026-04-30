@@ -45,7 +45,7 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 export default function SRSScreen() {
   const navigation = useNavigation<Nav>();
   const { items, updateSRS, toggleBookmark } = useVaultStore();
-  const { trackStudySession, recordLatency, avgLatencyMs, studyIntensity, setStudyIntensity, clozeEnabled, setClozeEnabled, level } = useProfileStore();
+  const { trackStudySession, recordLatency, avgLatencyMs, studyIntensity, setStudyIntensity, clozeEnabled, setClozeEnabled, level, addXp, addBadge, xp } = useProfileStore();
 
   const [phase, setPhase] = useState<'pick' | 'session'>('pick');
   const [selectedIntensity, setSelectedIntensity] = useState<StudyIntensity>(studyIntensity);
@@ -169,6 +169,8 @@ export default function SRSScreen() {
 
     setSessionCards((c) => c + 1);
     trackStudySession(1);
+    addXp(10);
+    addBadge('first-review'); // no-op if already earned
 
     if (currentIdx + 1 < activeSessionDeck.length || shouldRepeat) {
       setCurrentIdx((i) => i + 1);

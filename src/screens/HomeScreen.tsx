@@ -7,7 +7,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Colors, Radius, Spacing } from '../theme';
 import { PgCard, PgRing, PgStrength, Icons } from '../components';
-import { useVaultStore, useProfileStore } from '../store';
+import { useVaultStore, useProfileStore, BADGE_DEFS, levelFromXp, xpForLevel, XP_PER_REVIEW, XP_PER_CHALLENGE } from '../store';
 import { CONTENT, ZIPF_TOP_500, NEWS_ARTICLES } from '../data/seed';
 import { RootStackParamList } from '../navigation';
 
@@ -29,7 +29,24 @@ function typeColor(type: string) {
 export default function HomeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const items = useVaultStore((s) => s.items);
-  const { name, streak, dailyGoal, todayReviewed, visitedConnectedSpeech } = useProfileStore();
+  const { name, streak, dailyGoal, todayReviewed, visitedConnectedSpeech, xp, badges, dailyChallenges, weeklyCards, initDailyChallenges, completeChallenge, addXp, addBadge } = useProfileStore();
+
+  // Init daily challenges + auto-check badges on mount
+  React.useEffect(() => {
+    initDailyChallenges();
+    // Auto-check badges
+    if (items.length >= 50) addBadge('collector-50');
+    if (items.length >= 100) addBadge('scholar-100');
+    if (streak >= 7) addBadge('streak-7');
+    if (streak >= 30) addBadge('streak-30');
+    if (xp >= 1000) addBadge('reviews-100');
+  }, [items.length, streak, xp]);
+
+  const userLevel = levelFromXp(xp);
+  const nextLevelXp = xpForLevel(userLevel);
+  const currentLevelXp = xpForLevel(userLevel - 1);
+  const levelPct = Math.min(1, (xp - currentLevelXp) / (nextLevelXp - currentLevelXp));
+  const challengesDone = dailyChallenges.filter((t) => t.done).length;
 
   const missionPct = Math.min(1, dailyGoal > 0 ? todayReviewed / dailyGoal : 0);
   const missionDone = todayReviewed >= dailyGoal;
@@ -73,7 +90,7 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 32 }}>
-        {/* Greeting */}
+        {/* Greeting + XP */}
         <View style={styles.greeting}>
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>{displayName[0].toUpperCase()}</Text>
@@ -90,6 +107,16 @@ export default function HomeScreen() {
             <Icons.Flame size={15} color={Colors.coral} />
             <Text style={styles.streakText}>{streak}</Text>
           </TouchableOpacity>
+        </View>
+        {/* XP Bar */}
+        <View style={{ paddingHorizontal: Spacing.lg, marginTop: 4 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Text style={{ fontSize: 12, fontWeight: '700', color: Colors.coral }}>Nv.{userLevel}</Text>
+            <View style={{ flex: 1, height: 6, backgroundColor: Colors.line, borderRadius: 3 }}>
+              <View style={{ width: `${levelPct * 100}%` as any, height: 6, backgroundColor: Colors.coral, borderRadius: 3 }} />
+            </View>
+            <Text style={{ fontSize: 10, color: Colors.inkMute, fontWeight: '600' }}>{xp} XP</Text>
+          </View>
         </View>
 
         {/* Hero Focus Card */}
@@ -172,6 +199,55 @@ export default function HomeScreen() {
             </View>
           </View>
         </View>
+
+        {/* Daily Challenges */}
+        {dailyChallenges.length > 0 && (
+          <View style={{ paddingHorizontal: Spacing.lg, marginTop: 12 }}>
+            <View style={{
+              backgroundColor: Colors.paper, borderRadius: Radius.md,
+              borderWidth: 0.5, borderColor: Colors.line, padding: 14,
+            }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                <Text style={{ fontSize: 18 }}>🎯</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: Colors.ink }}>
+                    Desafios do Dia
+                  </Text>
+                  <Text style={{ fontSize: 11, color: Colors.inkMute }}>
+                    {challengesDone}/{dailyChallenges.length} concluídos
+                  </Text>
+                </View>
+                {challengesDone === dailyChallenges.length && (
+                  <View style={{ backgroundColor: Colors.mossSoft, borderRadius: Radius.full, paddingHorizontal: 10, paddingVertical: 4 }}>
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: Colors.moss }}>✓ Completo</Text>
+                  </View>
+                )}
+              </View>
+              {dailyChallenges.map((t) => (
+                <TouchableOpacity
+                  key={t.id}
+                  disabled={t.done}
+                  onPress={() => { completeChallenge(t.id); addXp(XP_PER_CHALLENGE); }}
+                  style={{
+                    flexDirection: 'row', alignItems: 'center', gap: 10,
+                    paddingVertical: 8, opacity: t.done ? 0.5 : 1,
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <View style={{
+                    width: 22, height: 22, borderRadius: 11,
+                    borderWidth: 2, borderColor: t.done ? Colors.moss : Colors.line,
+                    backgroundColor: t.done ? Colors.moss : 'transparent',
+                    alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    {t.done && <Text style={{ fontSize: 12, color: Colors.sand, fontWeight: '700' }}>✓</Text>}
+                  </View>
+                  <Text style={{ fontSize: 13, color: Colors.inkSoft, flex: 1 }}>{t.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        )}
 
         {/* Word of the Day */}
         {wordOfDay && (
@@ -259,6 +335,47 @@ export default function HomeScreen() {
             <Text style={styles.quickLabel}>Connected Speech</Text>
             <Text style={styles.quickSub}>Schwa · reduções · linking · elisão</Text>
           </TouchableOpacity>
+        </View>
+
+        {/* Weekly Mini Dashboard */}
+        <View style={{ paddingHorizontal: Spacing.lg, marginTop: 14 }}>
+          <View style={{
+            backgroundColor: Colors.paper, borderRadius: Radius.md,
+            borderWidth: 0.5, borderColor: Colors.line, padding: 14,
+          }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+              <Text style={{ fontSize: 11, fontWeight: '700', letterSpacing: 0.6, color: Colors.inkMute, textTransform: 'uppercase' }}>
+                Sua Semana
+              </Text>
+              <Text style={{ fontSize: 11, color: Colors.inkMute, fontWeight: '500' }}>
+                {items.filter((v) => v.srs === 'mature').length} maduras · {items.length} total
+              </Text>
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: 40, gap: 4 }}>
+              {(() => {
+                const dayLabels = ['S', 'T', 'Q', 'Q', 'S', 'S', 'D'];
+                const maxMin = Math.max(...weeklyCards, 1);
+                return dayLabels.map((l, i) => {
+                  const min = weeklyCards[i] * 2;
+                  const h = maxMin > 0 ? (min / maxMin) * 36 : 0;
+                  const isToday = i === new Date().getDay() - 1;
+                  return (
+                    <View key={i} style={{ flex: 1, alignItems: 'center', gap: 4 }}>
+                      <View style={{
+                        width: '100%', height: Math.max(4, h),
+                        borderRadius: 4,
+                        backgroundColor: isToday ? Colors.coral : Colors.moss,
+                        opacity: min > 0 ? 1 : 0.15,
+                      }} />
+                      <Text style={{ fontSize: 9, fontWeight: '600', color: isToday ? Colors.coral : Colors.inkMute }}>
+                        {l}
+                      </Text>
+                    </View>
+                  );
+                });
+              })()}
+            </View>
+          </View>
         </View>
 
         {/* Pending Triagem */}

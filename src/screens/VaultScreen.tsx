@@ -17,6 +17,7 @@ const FILTERS = [
   { id: 'reduction',   lbl: 'Reductions' },
   { id: 'collocation', lbl: 'Collocations' },
   { id: 'phonetic',    lbl: 'Fonética' },
+  { id: 'bookmarked',  lbl: '⭐ Favoritos' },
 ];
 
 function typeColor(type: VaultItem['type']) {
@@ -49,12 +50,17 @@ function fnMeta(id: string) {
 
 export default function VaultScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { items, removeItem } = useVaultStore();
+  const { items, removeItem, toggleBookmark } = useVaultStore();
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
 
   const dueCount = useMemo(
     () => items.filter((v) => v.srs === 'due' || v.srs === 'new').length,
+    [items],
+  );
+
+  const bookmarkedCount = useMemo(
+    () => items.filter((v) => v.bookmarked).length,
     [items],
   );
 
@@ -64,6 +70,8 @@ export default function VaultScreen() {
       result = result.filter((v) =>
         ['chunk', 'phrase', 'idiom', 'gap-filler', 'collocation'].includes(v.type)
       );
+    } else if (filter === 'bookmarked') {
+      result = result.filter((v) => v.bookmarked);
     } else if (filter !== 'all') {
       result = result.filter((v) => v.type === filter);
     }
@@ -140,6 +148,12 @@ export default function VaultScreen() {
             {items.filter((v) => v.srs === 'mature').length}
           </Text>
         </View>
+        {bookmarkedCount > 0 && (
+          <View style={[styles.stat, { backgroundColor: Colors.coralSoft }]}>
+            <Text style={[styles.statLabel, { color: Colors.coral }]}>⭐ FAV</Text>
+            <Text style={[styles.statValue, { color: Colors.coral }]}>{bookmarkedCount}</Text>
+          </View>
+        )}
       </View>
 
       {/* Filter chips */}
@@ -220,7 +234,9 @@ export default function VaultScreen() {
               </View>
               <View style={styles.itemFooter}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                  <Icons.Bookmark size={11} color={Colors.inkMute} />
+                  <TouchableOpacity onPress={() => toggleBookmark(v.id)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} activeOpacity={0.6}>
+                    <Icons.Bookmark size={12} color={v.bookmarked ? Colors.coral : Colors.inkMute} />
+                  </TouchableOpacity>
                   <Text style={styles.itemSource}>{v.source} · {v.date}</Text>
                 </View>
                 <PgStrength value={v.strength} c={srsColor} />

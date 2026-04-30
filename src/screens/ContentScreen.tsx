@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet, Modal, Pressable,
 } from 'react-native';
@@ -46,21 +46,40 @@ export default function ContentScreen() {
     return true;
   });
 
+  // Memoize vault terms set once for all progress lookups
+  const vaultTermSet = useMemo(
+    () => new Set(items.map((v) => v.term.toLowerCase())),
+    [items],
+  );
+
   function vocabProgress(content: ContentItem): VocabProgress {
     const vocab = content.vocabulary ?? [];
     if (vocab.length === 0) return null;
-    const captured = vocab.filter((s) =>
-      items.some((v) => v.term.toLowerCase() === s.term.toLowerCase())
-    ).length;
+    const captured = vocab.filter((s) => vaultTermSet.has(s.term.toLowerCase())).length;
     return { captured, total: vocab.length };
   }
 
+  // Memoize progress per content item
+  const contentProgress = useMemo(() => {
+    const map = new Map<string, VocabProgress>();
+    for (const c of filteredContent) {
+      map.set(c.id, vocabProgress(c));
+    }
+    return map;
+  }, [filteredContent, vaultTermSet]);
+
   // News progress: how many articles have all vocab captured
-  const newsDone = NEWS_ARTICLES.filter((a) =>
-    a.vocabulary.length > 0 &&
-    a.vocabulary.every((s) => items.some((v) => v.term.toLowerCase() === s.term.toLowerCase()))
-  ).length;
-  const newsAllDone = newsDone === NEWS_ARTICLES.length;
+  const newsProgress = useMemo(() => {
+    const done = NEWS_ARTICLES.filter((a) =>
+      a.vocabulary.length > 0 &&
+      a.vocabulary.every((s) => vaultTermSet.has(s.term.toLowerCase()))
+    ).length;
+    return { done, all: NEWS_ARTICLES.length, allDone: done === NEWS_ARTICLES.length };
+  }, [vaultTermSet]);
+
+  // Replace newsDone/newsAllDone with memoized version
+  const newsDone = newsProgress.done;
+  const newsAllDone = newsProgress.allDone;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -119,16 +138,18 @@ export default function ContentScreen() {
         {/* Featured */}
         <View style={{ paddingHorizontal: Spacing.lg }}>
           {(() => {
-            const prog = vocabProgress(CONTENT[0]);
+            const firstId = filteredContent.length > 0 ? filteredContent[0].id : null;
+            const featuredItem = filteredContent.length > 0 ? filteredContent[0] : CONTENT[0];
+            const prog = firstId ? contentProgress.get(firstId) ?? null : null;
             const allCaptured = prog ? prog.captured === prog.total : false;
             return (
               <TouchableOpacity
                 style={styles.featured}
-                onPress={() => navigation.navigate('ContentDetail', { contentId: CONTENT[0].id })}
+                onPress={() => navigation.navigate('ContentDetail', { contentId: featuredItem.id })}
                 activeOpacity={0.85}
               >
-                <View style={[styles.featuredArt, { backgroundColor: CONTENT[0].art }]}>
-                  {kindIcon(CONTENT[0].kind, '#FBF6EB')}
+                <View style={[styles.featuredArt, { backgroundColor: featuredItem.art }]}>
+                  {kindIcon(featuredItem.kind, '#FBF6EB')}
                   {allCaptured && (
                     <View style={styles.capturedOverlay}>
                       <Text style={styles.capturedOverlayText}>✓ Capturado</Text>
@@ -137,12 +158,12 @@ export default function ContentScreen() {
                 </View>
                 <View style={styles.featuredBody}>
                   <View style={styles.featuredMeta}>
-                    <Text style={styles.featuredKind}>{CONTENT[0].kind.toUpperCase()}</Text>
-                    <PgChip c={Colors.moss} soft={Colors.mossSoft}>{CONTENT[0].match}% match</PgChip>
+                    <Text style={styles.featuredKind}>{featuredItem.kind.toUpperCase()}</Text>
+                    <PgChip c={Colors.moss} soft={Colors.mossSoft}>{featuredItem.match}% match</PgChip>
                   </View>
-                  <Text style={styles.featuredTitle}>{CONTENT[0].title}</Text>
-                  <Text style={styles.featuredAuthor}>{CONTENT[0].author}</Text>
-                  <Text style={styles.featuredWhy}>{CONTENT[0].why}</Text>
+                  <Text style={styles.featuredTitle}>{featuredItem.title}</Text>
+                  <Text style={styles.featuredAuthor}>{featuredItem.author}</Text>
+                  <Text style={styles.featuredWhy}>{featuredItem.why}</Text>
                   {prog && (
                     <VocabProgressBar captured={prog.captured} total={prog.total} />
                   )}
@@ -158,7 +179,7 @@ export default function ContentScreen() {
         </View>
         <View style={{ paddingHorizontal: Spacing.lg, marginTop: 10, gap: 10 }}>
           {filteredContent.slice(1).map((c) => {
-            const prog = vocabProgress(c);
+            const prog = contentProgress.get(c.id) ?? null;
             const allCaptured = prog ? prog.captured === prog.total : false;
             return (
               <TouchableOpacity
