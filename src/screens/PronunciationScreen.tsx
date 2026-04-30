@@ -1,6 +1,6 @@
-import React, { useRef, useState, useMemo } from 'react';
+import React, { useRef, useState, useMemo, useCallback } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, StyleSheet, PanResponder, Animated, Dimensions,
+  View, Text, ScrollView, TouchableOpacity, StyleSheet, FlatList, Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -84,9 +84,7 @@ export default function PronunciationScreen() {
   React.useEffect(() => { markConnectedSpeechVisited(); }, []);
   const [activeSchwa, setActiveSchwa] = useState(0);
   const tabBarRef    = useRef<ScrollView>(null);
-  const tabIndexRef  = useRef(0);
-  const pagerX       = useRef(new Animated.Value(0)).current;
-  const snapRef      = useRef<(i: number) => void>(() => {});
+  const pagerRef     = useRef<FlatList>(null);
 
   // Tier-filtered data
   const schwaByTier = useMemo(() =>
@@ -101,26 +99,19 @@ export default function PronunciationScreen() {
     CONNECTED_SPEECH.filter((c) => c.tier === tier),
   [tier]);
 
-  // Vault bridge — items with type 'reduction' or 'phonetic' not already in seed
+  // Vault bridge
   const vaultReductions = useMemo(() =>
     vaultItems.filter((v) => v.type === 'reduction').map((v) => ({
-      full: v.term,
-      reduced: v.term,
-      phon: '',
-      tier: 'intermediate' as Tier,
+      full: v.term, reduced: v.term, phon: '',
     })),
   [vaultItems]);
 
   const vaultPhonetics = useMemo(() =>
     vaultItems.filter((v) => v.type === 'phonetic').map((v) => ({
-      word: v.term,
-      ipa: '',
-      schwas: [] as number[],
-      tier: 'intermediate' as Tier,
+      word: v.term, ipa: '', schwas: [] as number[],
     })),
   [vaultItems]);
 
-  // Counts per tier for current tab
   const currentTabId = TABS[tabIndex].id;
 
   const tierCounts: Record<Tier, number> = useMemo(() => {
@@ -138,7 +129,6 @@ export default function PronunciationScreen() {
           advanced: REDUCTIONS.filter((r) => r.tier === 'advanced').length,
         };
       default: {
-        const isLinkOrAssim = currentTabId === 'link' || currentTabId === 'assim';
         const phenomena = currentTabId === 'link' ? ['linking', 'intrusion']
           : currentTabId === 'assim' ? ['assimilation']
           : ['elision'];
@@ -151,45 +141,48 @@ export default function PronunciationScreen() {
     }
   }, [currentTabId]);
 
-  const linkItems    = connectedByTier.filter((c) => c.phenomenon === 'linking' || c.phenomenon === 'intrusion');
-  const assimItems   = connectedByTier.filter((c) => c.phenomenon === 'assimilation');
-  const elisionItems = connectedByTier.filter((c) => c.phenomenon === 'elision');
+  const linkItems    = useMemo(() => connectedByTier.filter((c) => c.phenomenon === 'linking' || c.phenomenon === 'intrusion'), [connectedByTier]);
+  const assimItems   = useMemo(() => connectedByTier.filter((c) => c.phenomenon === 'assimilation'), [connectedByTier]);
+  const elisionItems = useMemo(() => connectedByTier.filter((c) => c.phenomenon === 'elision'), [connectedByTier]);
 
-  const snapToTab = (index: number) => {
-    tabIndexRef.current = index;
+  const snapToTab = useCallback((index: number) => {
     setTabIndex(index);
     tabBarRef.current?.scrollTo({ x: Math.max(0, index * 110 - 50), animated: true });
-    Animated.spring(pagerX, {
-      toValue: -(index * SW),
-      useNativeDriver: false,
-      tension: 200,
-      friction: 15,
-    }).start();
-  };
-  snapRef.current = snapToTab;
+    pagerRef.current?.scrollToIndex({ index, animated: true });
+  }, []);
 
-  const swipePan = useRef(
-    PanResponder.create({
-      onMoveShouldSetPanResponder: (_, gs) =>
-        Math.abs(gs.dx) > Math.abs(gs.dy) * 0.8 && (
-          Math.abs(gs.dx) > 3 || Math.abs(gs.vx) > 0.15
-        ),
-      onPanResponderGrant: () => { pagerX.stopAnimation(); },
-      onPanResponderMove: (_, gs) => {
-        const base = -(tabIndexRef.current * SW);
-        pagerX.setValue(base + gs.dx);
-      },
-      onPanResponderRelease: (_, gs) => {
-        let next = tabIndexRef.current;
-        if (gs.vx > 0.15 && next > 0) next--;
-        else if (gs.vx < -0.15 && next < TABS.length - 1) next++;
-        else if (gs.dx > SW * 0.10 && next > 0) next--;
-        else if (gs.dx < -SW * 0.10 && next < TABS.length - 1) next++;
-        snapRef.current(next);
-      },
-      onPanResponderTerminate: () => { snapRef.current(tabIndexRef.current); },
-    })
-  ).current;
+  const onViewableItemsChanged = useRef(({ viewableItems }: any) => {
+    if (viewableItems.length > 0) {
+      const idx = viewableItems[0].index ?? 0;
+      setTabIndex(idx);
+      tabBarRef.current?.scrollTo({ x: Math.max(0, idx * 110 - 50), animated: true });
+    }
+  }).current;
+
+  const viewabilityConfig = useRef({ viewAreaCoveragePercentThreshold: 30 }).current;
+
+  const renderPage = useCallback(({ index }: { index: number }) => {
+    const tabId = TABS[index]?.id;
+    return (
+      <ScrollView style={{ width: SW }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 48 }}>
+        {tabId === 'schwa' && <SchwaPage schwaByTier={schwaByTier} activeSchwa={activeSchwa} setActiveSchwa={setActiveSchwa} vaultPhonetics={vaultPhonetics} />}
+        {tabId === 'reduce' && <ReductionsPage reductionsByTier={reductionsByTier} vaultReductions={vaultReductions} />}
+        {tabId === 'link' && <ConnectedPage items={linkItems} phenomena={['linking', 'intrusion']} />}
+        {tabId === 'assim' && <ConnectedPage items={assimItems} phenomena={['assimilation']} />}
+        {tabId === 'elision' && (
+          <>
+            <ConnectedPage items={elisionItems} phenomena={['elision']} />
+            <ShadowingCard navigation={navigation} />
+          </>
+        )}
+      </ScrollView>
+    );
+  }, [schwaByTier, activeSchwa, reductionsByTier, vaultReductions, vaultPhonetics, linkItems, assimItems, elisionItems, navigation]);
+
+  const getItemLayout = useCallback(
+    (_: any, index: number) => ({ length: SW, offset: SW * index, index }),
+    [],
+  );
 
   const currentTab = TABS[tabIndex].id;
 
@@ -219,7 +212,7 @@ export default function PronunciationScreen() {
           return (
             <TouchableOpacity
               key={t.id}
-              onPress={() => snapRef.current(i)}
+              onPress={() => snapToTab(i)}
               style={[styles.tab, active && { backgroundColor: t.color, borderColor: t.color }]}
               activeOpacity={0.8}
             >
@@ -256,187 +249,158 @@ export default function PronunciationScreen() {
         })}
       </View>
 
-      {/* Pager */}
-      <View style={{ flex: 1, overflow: 'hidden' }} {...swipePan.panHandlers}>
-        <Animated.View style={{ flexDirection: 'row', width: SW * TABS.length, flex: 1, transform: [{ translateX: pagerX }] }}>
-
-          {/* ── Schwa ── */}
-          <ScrollView style={{ width: SW }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 48 }}>
-            <View style={{ paddingHorizontal: Spacing.lg, paddingBottom: 16 }}>
-              <View style={styles.heroCard}>
-                <Text style={styles.heroSchwa}>ə</Text>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.heroLabel}>O SOM MAIS FREQUENTE DO INGLÊS</Text>
-                  <Text style={styles.heroText}>
-                    Vogal neutra, relaxada — aparece em ~30% das sílabas átonas. Se você não dominar o schwa, nunca vai soar natural.
-                  </Text>
-                </View>
-              </View>
-            </View>
-            <View style={{ paddingHorizontal: Spacing.lg }}>
-              <Text style={styles.sectionTitle}>Encontre o schwa</Text>
-              {schwaByTier.map((w, i) => {
-                const isOpen = activeSchwa === i;
-                const letters = w.word.split('');
-                const schwaIdxs = SCHWA_LETTER_MAP[w.word] || [];
-                return (
-                  <TouchableOpacity
-                    key={i}
-                    onPress={() => setActiveSchwa(i)}
-                    style={[styles.wordCard, isOpen && styles.wordCardActive]}
-                    activeOpacity={0.8}
-                  >
-                    <View style={styles.wordRow}>
-                      <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-                        {letters.map((l, li) => (
-                          <Text key={li} style={[styles.wordLetter, schwaIdxs.includes(li) && styles.schwaLetter]}>
-                            {l}
-                          </Text>
-                        ))}
-                      </View>
-                      <View style={styles.wordRight}>
-                        <Text style={styles.ipaText}>{w.ipa}</Text>
-                        <TouchableOpacity style={styles.playBtn} onPress={() => Speech.speak(w.word, { language: 'en-US' })} activeOpacity={0.7}>
-                          <Icons.Play size={14} color={Colors.coral} />
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
-              {schwaByTier.length === 0 && (
-                <Text style={{ fontSize: 13, color: Colors.inkMute, textAlign: 'center', marginTop: 20 }}>
-                  Nenhum exemplo neste nível.
-                </Text>
-              )}
-
-              {/* Vault bridge — phonetic items */}
-              {vaultPhonetics.length > 0 && (
-                <View style={{ marginTop: 20 }}>
-                  <Text style={styles.vaultBridgeTitle}>DO SEU VAULT</Text>
-                  {vaultPhonetics.map((vp, i) => (
-                    <View key={i} style={[styles.wordCard, { borderLeftWidth: 3, borderLeftColor: Colors.moss }]}>
-                      <View style={styles.wordRow}>
-                        <Text style={[styles.wordLetter, { fontSize: 18 }]}>{vp.word}</Text>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                          <View style={styles.vaultDot} />
-                          <Text style={{ fontSize: 11, color: Colors.moss, fontWeight: '600' }}>Vault</Text>
-                        </View>
-                      </View>
-                    </View>
-                  ))}
-                </View>
-              )}
-            </View>
-          </ScrollView>
-
-          {/* ── Reductions ── */}
-          <ScrollView style={{ width: SW }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 48 }}>
-            <View style={{ paddingHorizontal: Spacing.lg, paddingBottom: 16 }}>
-              <View style={[styles.explainerCard, { borderLeftWidth: 3, borderLeftColor: Colors.ocean }]}>
-                <Text style={[styles.explainerLabel, { color: Colors.ocean }]}>FORMAS NATURAIS DA FALA</Text>
-                <Text style={styles.explainerText}>
-                  Falantes nativos não pronunciam tudo como na escrita. Aprender as reductions é ouvir o inglês como ele é — não como está no livro.
-                </Text>
-              </View>
-            </View>
-            <View style={{ paddingHorizontal: Spacing.lg, gap: 8 }}>
-              {reductionsByTier.map((r, i) => (
-                <View key={i} style={styles.reductionCard}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.reductionFull}>{r.full}</Text>
-                    <Text style={[styles.reductionReduced, { color: Colors.ocean }]}>{r.reduced}</Text>
-                  </View>
-                  <View style={styles.reductionRight}>
-                    <Text style={styles.reductionPhon}>{r.phon}</Text>
-                    <TouchableOpacity style={[styles.reductionPlayBtn, { backgroundColor: Colors.ocean }]} onPress={() => Speech.speak(r.full, { language: 'en-US' })} activeOpacity={0.7}>
-                      <Icons.Play size={14} color="#fff" />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              ))}
-              {reductionsByTier.length === 0 && (
-                <Text style={{ fontSize: 13, color: Colors.inkMute, textAlign: 'center', marginTop: 20 }}>
-                  Nenhuma redução neste nível.
-                </Text>
-              )}
-
-              {/* Vault bridge — reduction items */}
-              {vaultReductions.length > 0 && (
-                <View style={{ marginTop: 20 }}>
-                  <Text style={styles.vaultBridgeTitle}>DO SEU VAULT</Text>
-                  {vaultReductions.map((vr, i) => (
-                    <TouchableOpacity
-                      key={i}
-                      style={[styles.reductionCard, { borderLeftWidth: 3, borderLeftColor: Colors.moss }]}
-                      onPress={() => Speech.speak(vr.full, { language: 'en-US' })}
-                      activeOpacity={0.8}
-                    >
-                      <View style={{ flex: 1 }}>
-                        <Text style={[styles.reductionReduced, { color: Colors.ocean }]}>{vr.full}</Text>
-                      </View>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <View style={styles.vaultDot} />
-                        <Text style={{ fontSize: 11, color: Colors.moss, fontWeight: '600' }}>Vault</Text>
-                      </View>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              )}
-            </View>
-          </ScrollView>
-
-          {/* ── Linking + Intrusion ── */}
-          <ScrollView style={{ width: SW }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 48 }}>
-            <ConnectedSpeechSection items={linkItems} phenomena={['linking', 'intrusion']} currentTab={currentTab} />
-          </ScrollView>
-
-          {/* ── Assimilation ── */}
-          <ScrollView style={{ width: SW }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 48 }}>
-            <ConnectedSpeechSection items={assimItems} phenomena={['assimilation']} currentTab={currentTab} />
-          </ScrollView>
-
-          {/* ── Elision ── */}
-          <ScrollView style={{ width: SW }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 48 }}>
-            <ConnectedSpeechSection items={elisionItems} phenomena={['elision']} currentTab={currentTab} />
-
-            {/* Shadowing entry card */}
-            <View style={{ paddingHorizontal: Spacing.lg, marginTop: 24 }}>
-              <TouchableOpacity
-                onPress={() => navigation.navigate('Shadowing')}
-                style={styles.shadowingCard}
-                activeOpacity={0.85}
-              >
-                <View style={[styles.shadowingIcon, { backgroundColor: Colors.purpleSoft }]}>
-                  <Icons.Wave size={24} color={Colors.purple} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.shadowingTitle}>Shadowing</Text>
-                  <Text style={styles.shadowingSub}>
-                    Pratique a pronúncia repetindo áudios em tempo real. Melhore sua fluência e redução de sotaque.
-                  </Text>
-                </View>
-                <Icons.Next size={18} color={Colors.purple} />
-              </TouchableOpacity>
-            </View>
-          </ScrollView>
-
-        </Animated.View>
-      </View>
+      {/* Pager — FlatList nativo, sem PanResponder */}
+      <FlatList
+        ref={pagerRef}
+        data={TABS}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        bounces={false}
+        onViewableItemsChanged={onViewableItemsChanged}
+        viewabilityConfig={viewabilityConfig}
+        getItemLayout={getItemLayout}
+        renderItem={({ index }) => renderPage({ index })}
+        keyExtractor={(_, i) => String(i)}
+        initialScrollIndex={0}
+        removeClippedSubviews={true}
+        style={{ flex: 1 }}
+      />
     </SafeAreaView>
   );
 }
 
-// ─── Connected Speech Section ────────────────────────────────────────────────
-function ConnectedSpeechSection({
-  items,
-  phenomena,
-  currentTab,
-}: {
-  items: typeof CONNECTED_SPEECH;
-  phenomena: ConnectedSpeechPhenomenon[];
-  currentTab: string;
-}) {
+// ─── Page Components ──────────────────────────────────────────────────────────
+
+function SchwaPage({ schwaByTier, activeSchwa, setActiveSchwa, vaultPhonetics }: any) {
+  return (
+    <>
+      <View style={{ paddingHorizontal: Spacing.lg, paddingBottom: 16 }}>
+        <View style={styles.heroCard}>
+          <Text style={styles.heroSchwa}>ə</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.heroLabel}>O SOM MAIS FREQUENTE DO INGLÊS</Text>
+            <Text style={styles.heroText}>
+              Vogal neutra, relaxada — aparece em ~30% das sílabas átonas. Se você não dominar o schwa, nunca vai soar natural.
+            </Text>
+          </View>
+        </View>
+      </View>
+      <View style={{ paddingHorizontal: Spacing.lg }}>
+        <Text style={styles.sectionTitle}>Encontre o schwa</Text>
+        {schwaByTier.map((w: any, i: number) => {
+          const isOpen = activeSchwa === i;
+          const letters = w.word.split('');
+          const schwaIdxs = SCHWA_LETTER_MAP[w.word] || [];
+          return (
+            <TouchableOpacity
+              key={i}
+              onPress={() => setActiveSchwa(i)}
+              style={[styles.wordCard, isOpen && styles.wordCardActive]}
+              activeOpacity={0.8}
+            >
+              <View style={styles.wordRow}>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+                  {letters.map((l: string, li: number) => (
+                    <Text key={li} style={[styles.wordLetter, schwaIdxs.includes(li) && styles.schwaLetter]}>
+                      {l}
+                    </Text>
+                  ))}
+                </View>
+                <View style={styles.wordRight}>
+                  <Text style={styles.ipaText}>{w.ipa}</Text>
+                  <TouchableOpacity style={styles.playBtn} onPress={() => Speech.speak(w.word, { language: 'en-US' })} activeOpacity={0.7}>
+                    <Icons.Play size={14} color={Colors.coral} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </TouchableOpacity>
+          );
+        })}
+        {schwaByTier.length === 0 && (
+          <Text style={{ fontSize: 13, color: Colors.inkMute, textAlign: 'center', marginTop: 20 }}>
+            Nenhum exemplo neste nível.
+          </Text>
+        )}
+        {vaultPhonetics.length > 0 && (
+          <View style={{ marginTop: 20 }}>
+            <Text style={styles.vaultBridgeTitle}>DO SEU VAULT</Text>
+            {vaultPhonetics.map((vp: any, i: number) => (
+              <View key={i} style={[styles.wordCard, { borderLeftWidth: 3, borderLeftColor: Colors.moss }]}>
+                <View style={styles.wordRow}>
+                  <Text style={[styles.wordLetter, { fontSize: 18 }]}>{vp.word}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <View style={styles.vaultDot} />
+                    <Text style={{ fontSize: 11, color: Colors.moss, fontWeight: '600' }}>Vault</Text>
+                  </View>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+      </View>
+    </>
+  );
+}
+
+function ReductionsPage({ reductionsByTier, vaultReductions }: any) {
+  return (
+    <>
+      <View style={{ paddingHorizontal: Spacing.lg, paddingBottom: 16 }}>
+        <View style={[styles.explainerCard, { borderLeftWidth: 3, borderLeftColor: Colors.ocean }]}>
+          <Text style={[styles.explainerLabel, { color: Colors.ocean }]}>FORMAS NATURAIS DA FALA</Text>
+          <Text style={styles.explainerText}>
+            Falantes nativos não pronunciam tudo como na escrita. Aprender as reductions é ouvir o inglês como ele é — não como está no livro.
+          </Text>
+        </View>
+      </View>
+      <View style={{ paddingHorizontal: Spacing.lg, gap: 8 }}>
+        {reductionsByTier.map((r: any, i: number) => (
+          <View key={i} style={styles.reductionCard}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.reductionFull}>{r.full}</Text>
+              <Text style={[styles.reductionReduced, { color: Colors.ocean }]}>{r.reduced}</Text>
+            </View>
+            <View style={styles.reductionRight}>
+              <Text style={styles.reductionPhon}>{r.phon}</Text>
+              <TouchableOpacity style={[styles.reductionPlayBtn, { backgroundColor: Colors.ocean }]} onPress={() => Speech.speak(r.full, { language: 'en-US' })} activeOpacity={0.7}>
+                <Icons.Play size={14} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          </View>
+        ))}
+        {reductionsByTier.length === 0 && (
+          <Text style={{ fontSize: 13, color: Colors.inkMute, textAlign: 'center', marginTop: 20 }}>
+            Nenhuma redução neste nível.
+          </Text>
+        )}
+        {vaultReductions.length > 0 && (
+          <View style={{ marginTop: 20 }}>
+            <Text style={styles.vaultBridgeTitle}>DO SEU VAULT</Text>
+            {vaultReductions.map((vr: any, i: number) => (
+              <TouchableOpacity
+                key={i}
+                style={[styles.reductionCard, { borderLeftWidth: 3, borderLeftColor: Colors.moss }]}
+                onPress={() => Speech.speak(vr.full, { language: 'en-US' })}
+                activeOpacity={0.8}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.reductionReduced, { color: Colors.ocean }]}>{vr.full}</Text>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <View style={styles.vaultDot} />
+                  <Text style={{ fontSize: 11, color: Colors.moss, fontWeight: '600' }}>Vault</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+      </View>
+    </>
+  );
+}
+
+function ConnectedPage({ items, phenomena }: { items: typeof CONNECTED_SPEECH; phenomena: ConnectedSpeechPhenomenon[] }) {
   return (
     <>
       <View style={{ paddingHorizontal: Spacing.lg, paddingBottom: 16 }}>
@@ -487,6 +451,29 @@ function ConnectedSpeechSection({
         )}
       </View>
     </>
+  );
+}
+
+function ShadowingCard({ navigation }: any) {
+  return (
+    <View style={{ paddingHorizontal: Spacing.lg, marginTop: 24 }}>
+      <TouchableOpacity
+        onPress={() => navigation.navigate('Shadowing')}
+        style={styles.shadowingCard}
+        activeOpacity={0.85}
+      >
+        <View style={[styles.shadowingIcon, { backgroundColor: Colors.purpleSoft }]}>
+          <Icons.Wave size={24} color={Colors.purple} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.shadowingTitle}>Shadowing</Text>
+          <Text style={styles.shadowingSub}>
+            Pratique a pronúncia repetindo áudios em tempo real. Melhore sua fluência e redução de sotaque.
+          </Text>
+        </View>
+        <Icons.Next size={18} color={Colors.purple} />
+      </TouchableOpacity>
+    </View>
   );
 }
 
