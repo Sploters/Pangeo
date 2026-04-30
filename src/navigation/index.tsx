@@ -25,6 +25,8 @@ import NewsListScreen      from '../screens/NewsListScreen';
 import NewsArticleScreen   from '../screens/NewsArticleScreen';
 import ContentDetailScreen from '../screens/ContentDetailScreen';
 import GrammarScreen       from '../screens/GrammarScreen';
+import GrammarDetailScreen from '../screens/GrammarDetailScreen';
+import BookReaderScreen    from '../screens/BookReaderScreen';
 
 export type RootStackParamList = {
   Main: undefined;
@@ -42,6 +44,8 @@ export type RootStackParamList = {
   Vault: undefined;
   Discover: undefined;
   Grammar: undefined;
+  GrammarDetail: { topicId: string };
+  BookReader: { bookId: string };
 };
 
 export type TabParamList = {
@@ -153,6 +157,8 @@ export default function Navigation() {
         <Stack.Screen name="NewsList"      component={NewsListScreen}      options={{ presentation: 'modal' }} />
         <Stack.Screen name="NewsArticle"   component={NewsArticleScreen}   />
         <Stack.Screen name="ContentDetail" component={ContentDetailScreen} />
+        <Stack.Screen name="GrammarDetail" component={GrammarDetailScreen} />
+        <Stack.Screen name="BookReader"    component={BookReaderScreen}    />
       </Stack.Navigator>
     </NavigationContainer>
   );

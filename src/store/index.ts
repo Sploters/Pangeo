@@ -3,6 +3,40 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { VaultItem } from '../data/seed';
 
+// ─── GrammarStore ─────────────────────────────────────────────────────────────
+export type GrammarStatus = 'unseen' | 'seen' | 'got-it' | 'review' | 'confused';
+
+type GrammarStore = {
+  progress: Record<string, GrammarStatus>;   // topicId → status
+  collapsedLevels: string[];                  // level keys that are collapsed
+  markSeen: (topicId: string) => void;
+  setStatus: (topicId: string, status: GrammarStatus) => void;
+  toggleLevel: (level: string) => void;
+};
+
+export const useGrammarStore = create<GrammarStore>()(
+  persist(
+    (set) => ({
+      progress: {},
+      collapsedLevels: [],
+      markSeen: (topicId) =>
+        set((s) => {
+          if (s.progress[topicId]) return s; // don't downgrade existing status
+          return { progress: { ...s.progress, [topicId]: 'seen' } };
+        }),
+      setStatus: (topicId, status) =>
+        set((s) => ({ progress: { ...s.progress, [topicId]: status } })),
+      toggleLevel: (level) =>
+        set((s) => ({
+          collapsedLevels: s.collapsedLevels.includes(level)
+            ? s.collapsedLevels.filter((l) => l !== level)
+            : [...s.collapsedLevels, level],
+        })),
+    }),
+    { name: 'pangeo-grammar-v1', storage: createJSONStorage(() => AsyncStorage) }
+  )
+);
+
 // ─── Date helpers ─────────────────────────────────────────────────────────────
 function todayKey() {
   return new Date().toISOString().slice(0, 10); // 'YYYY-MM-DD'
