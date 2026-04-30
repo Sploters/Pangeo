@@ -158,12 +158,12 @@ export default function PronunciationScreen() {
   const snapToTab = (index: number) => {
     tabIndexRef.current = index;
     setTabIndex(index);
-    tabBarRef.current?.scrollTo({ x: Math.max(0, index * 90 - 50), animated: true });
+    tabBarRef.current?.scrollTo({ x: Math.max(0, index * 110 - 50), animated: true });
     Animated.spring(pagerX, {
       toValue: -(index * SW),
       useNativeDriver: false,
-      tension: 120,
-      friction: 20,
+      tension: 200,
+      friction: 15,
     }).start();
   };
   snapRef.current = snapToTab;
@@ -171,21 +171,20 @@ export default function PronunciationScreen() {
   const swipePan = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (_, gs) =>
-        Math.abs(gs.dx) > 8 && Math.abs(gs.dx) > Math.abs(gs.dy) * 1.2,
+        Math.abs(gs.dx) > Math.abs(gs.dy) * 0.8 && (
+          Math.abs(gs.dx) > 3 || Math.abs(gs.vx) > 0.15
+        ),
       onPanResponderGrant: () => { pagerX.stopAnimation(); },
       onPanResponderMove: (_, gs) => {
         const base = -(tabIndexRef.current * SW);
-        let nx = base + gs.dx;
-        if (nx > 0) nx *= 0.15;
-        const minX = -((TABS.length - 1) * SW);
-        if (nx < minX) nx = minX + (nx - minX) * 0.15;
-        pagerX.setValue(nx);
+        pagerX.setValue(base + gs.dx);
       },
       onPanResponderRelease: (_, gs) => {
-        const threshold = SW * 0.25;
         let next = tabIndexRef.current;
-        if (gs.dx < -threshold && next < TABS.length - 1) next++;
-        else if (gs.dx > threshold && next > 0) next--;
+        if (gs.vx > 0.15 && next > 0) next--;
+        else if (gs.vx < -0.15 && next < TABS.length - 1) next++;
+        else if (gs.dx > SW * 0.10 && next > 0) next--;
+        else if (gs.dx < -SW * 0.10 && next < TABS.length - 1) next++;
         snapRef.current(next);
       },
       onPanResponderTerminate: () => { snapRef.current(tabIndexRef.current); },
